@@ -28,23 +28,28 @@ export function LoginForm() {
     setError(null)
     setLoading(true)
 
-    const response = await fetch('/api/users/login', {
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-    })
+    try {
+      const response = await fetch('/api/users/login', {
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      })
 
-    setLoading(false)
+      setLoading(false)
 
-    if (!response.ok) {
-      setError('The email or password did not work. Check the account and try again.')
-      return
+      if (!response.ok) {
+        setError('The email or password did not work. Check the account and try again.')
+        return
+      }
+
+      router.replace(getSafeNextPath(searchParams.get('next')))
+      router.refresh()
+    } catch {
+      setLoading(false)
+      setError('Login did not finish. Check the server connection and try again.')
     }
-
-    router.replace(getSafeNextPath(searchParams.get('next')))
-    router.refresh()
   }
 
   return (
@@ -84,6 +89,11 @@ export function LoginForm() {
       <button disabled={loading} type="submit" className="us-button-primary w-full px-5 py-3 text-sm font-medium">
         {loading ? 'Signing in...' : 'Sign in to UnderSound'}
       </button>
+      {loading ? (
+        <p className="text-center text-xs" style={{ color: 'var(--us-muted)' }}>
+          First login after a rebuild can take a few seconds.
+        </p>
+      ) : null}
     </form>
   )
 }

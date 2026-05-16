@@ -3,7 +3,6 @@ import type { CollectionConfig, PayloadRequest } from 'payload'
 import { canCreateChannel } from '@/access/canCreateChannel'
 import { canManageChannel } from '@/access/canManageChannel'
 import { canReadChannel } from '@/access/canReadChannel'
-import { writeAuditLog } from '@/lib/audit'
 import { getLiveKitRoomName } from '@/lib/livekit'
 import { hashSpeakerPassword } from '@/lib/speaker-password'
 
@@ -240,39 +239,11 @@ export const Channels: CollectionConfig = {
         if (previousEventID && previousEventID !== nextEventID) {
           await syncEventChannels(req, previousEventID)
         }
-
-        if (previousDoc?.speakerPasswordHash !== doc.speakerPasswordHash) {
-          await writeAuditLog(req.payload, {
-            action: 'speaker_password.changed',
-            channel: doc.id,
-            collection: 'channels',
-            documentId: doc.id,
-            event: normalizeRelationshipID(doc.event),
-            metadata: {
-              name: doc.name,
-              scope: 'channel',
-              slug: doc.slug,
-            },
-            user: req.user,
-          })
-        }
       },
     ],
     afterDelete: [
       async ({ doc, req }) => {
         await syncEventChannels(req, doc.event)
-        await writeAuditLog(req.payload, {
-          action: 'channel.deleted',
-          channel: doc.id,
-          collection: 'channels',
-          documentId: doc.id,
-          event: normalizeRelationshipID(doc.event),
-          metadata: {
-            name: doc.name,
-            slug: doc.slug,
-          },
-          user: req.user,
-        })
       },
     ],
     beforeChange: [

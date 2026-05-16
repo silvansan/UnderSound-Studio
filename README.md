@@ -28,6 +28,18 @@ Built with Cursor-assisted development.
 
 ## Quick Start
 
+### Easy Portainer Deployment
+
+Start here for a server install:
+
+```text
+PORTAINER_EASY_STACK_DEPLOYMENT.md
+```
+
+It includes the copy-paste stack flow, environment variables, proxy setup, and required ports. For the shortest path, paste `PORTAINER_STACK_COPY_PASTE.yml` into a Portainer stack and replace the `CHANGE_ME` values.
+
+### Local Docker
+
 ```bash
 cp .env.example .env
 docker compose up -d --build
@@ -69,28 +81,12 @@ Do not delete these volumes during redeploys unless you intend to wipe data.
 - `docs/LIVEKIT.md`
 - `docs/DEPLOYMENT.md`
 - `docs/PORTAINER.md`
+- `PORTAINER_EASY_STACK_DEPLOYMENT.md`
+- `PORTAINER_STACK_COPY_PASTE.yml`
 - `docs/SECURITY.md`
 - `docs/MIGRATION.md`
 - `docs/ANDROID_COMPATIBILITY.md`
-- `docs/MOBILE_LINK_PARSER_UPDATE.md`
 - `docs/TESTING.md`
-
-## Mobile Compatibility
-
-Stable listener links:
-
-```text
-/listen/:eventSlug/:channelSlug
-```
-
-The Android/Flutter app should parse these links and load:
-
-```text
-GET /api/public/listen/:eventSlug/:channelSlug
-POST /api/livekit/listener-token
-```
-
-See `docs/MOBILE_LINK_PARSER_UPDATE.md`.
 
 ## Production Notes
 
@@ -98,6 +94,9 @@ See `docs/MOBILE_LINK_PARSER_UPDATE.md`.
 - Use HTTPS in production.
 - Point `PUBLIC_BASE_URL` and `NEXT_PUBLIC_APP_URL` to the public app URL.
 - Point `LIVEKIT_URL` to the browser-reachable LiveKit WebSocket URL.
+- Proxy `studio.example.com` to app port `3000`.
+- Proxy `livekit.example.com` to LiveKit port `7880` with WebSocket support.
+- Forward LiveKit RTC ports `7881/tcp` and `50000-50100/udp`.
 - Back up `undersound_db` and `undersound_uploads`.
 
 ## License

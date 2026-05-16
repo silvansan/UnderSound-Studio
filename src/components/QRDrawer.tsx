@@ -3,6 +3,8 @@
 import Image from 'next/image'
 import { useState } from 'react'
 
+import { MinusIcon, PlusIcon, QRCodeIcon } from '@/components/ActionIcons'
+
 type QRDrawerProps = {
   fileName?: string
   label: string
@@ -34,13 +36,16 @@ export function QRDrawer({ fileName, label, qrDataUrl, url }: QRDrawerProps) {
           background: 'linear-gradient(135deg, rgba(47, 143, 99, 0.08), rgba(38, 167, 242, 0.06))',
         }}
       >
-        {open ? `Hide ${label}` : `Show ${label}`}
+        <span className="flex items-center gap-2">
+          <QRCodeIcon />
+          {open ? `Hide ${label}` : `Show ${label}`}
+        </span>
         <span
           aria-hidden
-          className="flex h-8 w-8 items-center justify-center rounded-full text-lg"
+          className="flex h-8 w-8 items-center justify-center rounded-full"
           style={{ backgroundColor: 'rgba(255,255,255,0.72)', color: 'var(--us-blue-dark)' }}
         >
-          {open ? '-' : '+'}
+          {open ? <MinusIcon /> : <PlusIcon />}
         </span>
       </button>
       {open ? (

@@ -36,7 +36,7 @@ services:
           tcp_port: 7881
           port_range_start: 50000
           port_range_end: 50100
-          use_external_ip: false
+          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-false}
         keys:
           ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}
     environment:
@@ -59,7 +59,7 @@ services:
     volumes:
       - undersound_db:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U undersound -d undersound']
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
       timeout: 5s
       retries: 5

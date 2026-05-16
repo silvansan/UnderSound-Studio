@@ -118,7 +118,7 @@ export async function buildEmailAdapter() {
   return nodemailerAdapter({
     defaultFromAddress: smtp.from,
     defaultFromName: 'UnderSound',
-    skipVerify: process.env.NODE_ENV !== 'production',
+    skipVerify: true,
     transportOptions: {
       auth:
         smtp.user || smtp.pass

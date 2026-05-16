@@ -7,7 +7,6 @@ import {
   generateVerificationEmailSubject,
 } from '@/lib/email'
 import { shouldUseSecureCookies } from '@/lib/cookies'
-import { writeAuditLog } from '@/lib/audit'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 
 export const Users: CollectionConfig = {
@@ -243,40 +242,6 @@ export const Users: CollectionConfig = {
     },
   ],
   hooks: {
-    afterLogin: [
-      async ({ req, user }) => {
-        const lastLogin = new Date().toISOString()
-        const invitationAcceptedAt =
-          'invitationStatus' in user && user.invitationStatus === 'pending' ? lastLogin : undefined
-
-        await req.payload.update({
-          id: user.id,
-          collection: 'users',
-          data: {
-            ...(invitationAcceptedAt
-              ? {
-                  invitationAcceptedAt,
-                  invitationStatus: 'accepted',
-                }
-              : {}),
-            lastLogin,
-          },
-          overrideAccess: true,
-          req,
-        })
-
-        return {
-          ...user,
-          ...(invitationAcceptedAt
-            ? {
-                invitationAcceptedAt,
-                invitationStatus: 'accepted',
-              }
-            : {}),
-          lastLogin,
-        }
-      },
-    ],
     beforeLogin: [
       ({ user }) => {
         if (user && 'active' in user && user.active === false) {
@@ -296,50 +261,6 @@ export const Users: CollectionConfig = {
         }
 
         return data
-      },
-    ],
-    afterChange: [
-      async ({ doc, operation, previousDoc, req }) => {
-        if (operation === 'create') {
-          await writeAuditLog(req.payload, {
-            action: 'user.created',
-            collection: 'users',
-            documentId: doc.id,
-            metadata: {
-              email: doc.email,
-              role: doc.role,
-            },
-            user: req.user,
-          })
-        }
-
-        if (operation === 'update' && previousDoc?.role !== doc.role) {
-          await writeAuditLog(req.payload, {
-            action: 'user.role_changed',
-            collection: 'users',
-            documentId: doc.id,
-            metadata: {
-              email: doc.email,
-              from: previousDoc?.role,
-              to: doc.role,
-            },
-            user: req.user,
-          })
-        }
-      },
-    ],
-    afterDelete: [
-      async ({ doc, req }) => {
-        await writeAuditLog(req.payload, {
-          action: 'user.deleted',
-          collection: 'users',
-          documentId: doc.id,
-          metadata: {
-            email: doc.email,
-            role: doc.role,
-          },
-          user: req.user,
-        })
       },
     ],
   },

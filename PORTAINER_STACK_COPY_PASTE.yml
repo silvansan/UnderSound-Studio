@@ -1,0 +1,89 @@
+# UnderSound Studio - Portainer copy/paste stack
+#
+# How to use:
+# 1. In Portainer, create a new stack named "undersound-studio".
+# 2. Paste this whole file into the Web editor.
+# 3. Replace every CHANGE_ME / example domain before deploying.
+# 4. Keep the named volumes when updating the stack.
+#
+# Proxy notes:
+# - Proxy https://studio.example.com -> app:3000 with WebSocket support.
+# - Proxy https://livekit.example.com -> livekit:7880 with WebSocket support.
+# - Also forward 7881/tcp and 50000-50100/udp to the Docker host for LiveKit RTC media.
+# - Do not expose Postgres 5432 publicly.
+
+services:
+  app:
+    build:
+      context: https://github.com/silvansan/UnderSound-Studio.git
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PAYLOAD_SECRET: CHANGE_ME_LONG_RANDOM_PAYLOAD_SECRET_MIN_32_CHARS
+      DATABASE_URI: postgres://undersound:CHANGE_ME_DB_PASSWORD@db:5432/undersound
+      POSTGRES_USER: undersound
+      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
+      POSTGRES_DB: undersound
+      PAYLOAD_DB_PUSH: 'true'
+      NEXT_PUBLIC_APP_URL: https://studio.example.com
+      PUBLIC_BASE_URL: https://studio.example.com
+      LIVEKIT_API_KEY: undersound
+      LIVEKIT_API_SECRET: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
+      LIVEKIT_URL: wss://livekit.example.com
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: '587'
+      SMTP_USER: CHANGE_ME_SMTP_USER
+      SMTP_PASS: CHANGE_ME_SMTP_PASSWORD
+      SMTP_FROM: noreply@example.com
+      INITIAL_SUPER_ADMIN_EMAIL: admin@example.com
+      INITIAL_SUPER_ADMIN_PASSWORD: CHANGE_ME_FIRST_ADMIN_PASSWORD
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+    volumes:
+      - undersound_uploads:/app/media
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.9.1
+    command:
+      - --config-body
+      - |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          use_external_ip: true
+        keys:
+          undersound: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
+    ports:
+      - '7880:7880'
+      - '7881:7881'
+      - '50000-50100:50000-50100/udp'
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: undersound
+      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
+      POSTGRES_DB: undersound
+    volumes:
+      - undersound_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  undersound_db:
+  undersound_uploads:

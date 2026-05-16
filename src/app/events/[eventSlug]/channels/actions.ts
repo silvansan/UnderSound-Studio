@@ -3,9 +3,11 @@
 import configPromise from '@payload-config'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getPayload } from 'payload'
+import { getPayload, type Payload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
+import { isModeratorUser, isSuperAdminUser } from '@/lib/permissions'
+import type { User } from '@/payload-types'
 
 function slugify(value: string): string {
   return value
@@ -29,6 +31,65 @@ function tokenModeValue(formData: FormData): 'password' | 'private' | 'public' {
   const value = stringValue(formData, 'listenerTokenMode')
 
   return value === 'password' || value === 'private' ? value : 'public'
+}
+
+function relationshipID(value: number | string | { id?: number | string } | null | undefined) {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
+  }
+
+  return value?.id
+}
+
+async function canManageChannels(payload: Payload, user: User, eventID: number | string) {
+  if (isSuperAdminUser(user)) {
+    return true
+  }
+
+  if (!isModeratorUser(user)) {
+    return false
+  }
+
+  const event = await payload.findByID({
+    collection: 'events',
+    id: eventID,
+    overrideAccess: true,
+    user,
+  })
+
+  if (relationshipID(event.createdBy) === user.id) {
+    return true
+  }
+
+  const assignments = await payload.find({
+    collection: 'event-assignments',
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    user,
+    where: {
+      and: [
+        {
+          event: {
+            equals: eventID,
+          },
+        },
+        {
+          user: {
+            equals: user.id,
+          },
+        },
+        {
+          roleForEvent: {
+            in: ['admin', 'moderator'],
+          },
+        },
+      ],
+    },
+  })
+
+  return assignments.docs.length > 0
 }
 
 async function getEventID(eventSlug: string) {
@@ -65,6 +126,10 @@ export async function createChannelAction(formData: FormData) {
     throw new Error('Event not found.')
   }
 
+  if (!(await canManageChannels(payload, user, eventID))) {
+    throw new Error('You do not have permission to create channels for this event.')
+  }
+
   const channel = await payload.create({
     collection: 'channels',
     data: {
@@ -84,7 +149,7 @@ export async function createChannelAction(formData: FormData) {
       webrtcEnabled: booleanValue(formData, 'webrtcEnabled'),
       name,
     },
-    overrideAccess: false,
+    overrideAccess: true,
     user,
   })
 
@@ -106,6 +171,18 @@ export async function updateChannelAction(formData: FormData) {
 
   const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
+  const existingChannel = await payload.findByID({
+    collection: 'channels',
+    id,
+    overrideAccess: true,
+    user,
+  })
+  const eventID = typeof existingChannel.event === 'object' ? existingChannel.event.id : existingChannel.event
+
+  if (!(await canManageChannels(payload, user, eventID))) {
+    throw new Error('You do not have permission to update this channel.')
+  }
+
   const channel = await payload.update({
     id,
     collection: 'channels',
@@ -125,7 +202,7 @@ export async function updateChannelAction(formData: FormData) {
       webrtcEnabled: booleanValue(formData, 'webrtcEnabled'),
       name,
     },
-    overrideAccess: false,
+    overrideAccess: true,
     user,
   })
 
@@ -146,10 +223,22 @@ export async function deleteChannelAction(formData: FormData) {
 
   const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
+  const existingChannel = await payload.findByID({
+    collection: 'channels',
+    id,
+    overrideAccess: true,
+    user,
+  })
+  const eventID = typeof existingChannel.event === 'object' ? existingChannel.event.id : existingChannel.event
+
+  if (!(await canManageChannels(payload, user, eventID))) {
+    throw new Error('You do not have permission to delete this channel.')
+  }
+
   await payload.delete({
     id,
     collection: 'channels',
-    overrideAccess: false,
+    overrideAccess: true,
     user,
   })
 

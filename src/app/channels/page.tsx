@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { IconActionLink } from '@/components/ActionIcons'
 import { Layout } from '@/components/Layout'
 import { getDashboardAllChannels } from '@/lib/dashboard-data'
 import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
@@ -36,17 +37,21 @@ export default async function ChannelsPage() {
                 <Link href={`/events/${channel.eventSlug}/channels/${channel.slug}`} className="font-medium">
                   {channel.name}
                 </Link>
-                <div className="flex flex-wrap gap-2 text-sm">
-                  <Link href={`/events/${channel.eventSlug}/channels/${channel.slug}`}>QR code</Link>
-                  <a href={getSpeakerUrl(channel.eventSlug, channel.slug, publicBaseUrl)} rel="noreferrer" target="_blank">
-                    Open new tab
-                  </a>
+                <div className="flex flex-wrap gap-2">
+                  <IconActionLink href={`/events/${channel.eventSlug}/channels/${channel.slug}`} icon="qr">
+                    Open speaker QR code
+                  </IconActionLink>
+                  <IconActionLink href={getSpeakerUrl(channel.eventSlug, channel.slug, publicBaseUrl)} icon="open" target="_blank">
+                    Open speaker page
+                  </IconActionLink>
                 </div>
-                <div className="flex flex-wrap gap-2 text-sm">
-                  <Link href={`/events/${channel.eventSlug}/channels/${channel.slug}`}>QR code</Link>
-                  <a href={getListenerUrl(channel.eventSlug, channel.slug, publicBaseUrl)} rel="noreferrer" target="_blank">
-                    Open link
-                  </a>
+                <div className="flex flex-wrap gap-2">
+                  <IconActionLink href={`/events/${channel.eventSlug}/channels/${channel.slug}`} icon="qr">
+                    Open listener QR code
+                  </IconActionLink>
+                  <IconActionLink href={getListenerUrl(channel.eventSlug, channel.slug, publicBaseUrl)} icon="open" target="_blank">
+                    Open listener page
+                  </IconActionLink>
                 </div>
                 <span className={`us-chip ${channel.enabled === false ? 'us-chip-warning' : 'us-chip-blue'} w-fit`}>
                   {channel.enabled === false ? 'Disabled' : 'Enabled'}

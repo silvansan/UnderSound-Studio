@@ -52,15 +52,6 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
                 ))}
               </nav>
 
-              <div
-                className="relative z-10 mt-auto hidden rounded-2xl border px-4 py-4 xl:block"
-                style={{ borderColor: 'rgba(255,255,255,0.14)', backgroundColor: 'rgba(255,255,255,0.08)' }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70">Current focus</p>
-                <p className="mt-2 text-sm leading-6 text-white/92">
-                  Payload-powered event audio with clean public listener and speaker flows.
-                </p>
-              </div>
             </div>
           </aside>
         ) : null}

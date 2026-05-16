@@ -1,0 +1,238 @@
+# Easy Portainer Stack Deployment
+
+This is the shortest path to deploy UnderSound Studio from Portainer.
+
+The stack includes:
+
+- UnderSound Studio app
+- PostgreSQL database
+- LiveKit server
+- persistent uploads volume
+- optional Maildev for testing email
+
+## 1. Create The Stack
+
+1. Open Portainer.
+2. Go to **Stacks**.
+3. Click **Add stack**.
+4. Name it:
+
+```text
+undersound-studio
+```
+
+5. Paste the contents of `PORTAINER_STACK_COPY_PASTE.yml` into the Web editor.
+6. Replace every `CHANGE_ME` value and example domain.
+7. If you prefer using `docker-compose.yml`, paste that file instead and add the environment variables below in Portainer's **Environment variables** section.
+8. Click **Deploy the stack**.
+
+## 2. Copy-Paste Environment Variables
+
+For local/LAN testing:
+
+```env
+PAYLOAD_SECRET=replace-with-a-long-random-string-min-32-chars
+POSTGRES_USER=undersound
+POSTGRES_PASSWORD=replace-with-a-strong-db-password
+POSTGRES_DB=undersound
+PAYLOAD_DB_PUSH=true
+
+NEXT_PUBLIC_APP_URL=http://YOUR_SERVER_LAN_IP:3000
+PUBLIC_BASE_URL=http://YOUR_SERVER_LAN_IP:3000
+
+LIVEKIT_API_KEY=undersound
+LIVEKIT_API_SECRET=replace-with-a-long-random-livekit-secret
+LIVEKIT_URL=ws://YOUR_SERVER_LAN_IP:7880
+LIVEKIT_USE_EXTERNAL_IP=false
+
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=noreply@example.com
+
+INITIAL_SUPER_ADMIN_EMAIL=admin@example.com
+INITIAL_SUPER_ADMIN_PASSWORD=replace-with-a-strong-first-password
+```
+
+For cloud/production:
+
+```env
+PAYLOAD_SECRET=replace-with-a-long-random-string-min-32-chars
+POSTGRES_USER=undersound
+POSTGRES_PASSWORD=replace-with-a-strong-db-password
+POSTGRES_DB=undersound
+PAYLOAD_DB_PUSH=true
+
+NEXT_PUBLIC_APP_URL=https://studio.example.com
+PUBLIC_BASE_URL=https://studio.example.com
+
+LIVEKIT_API_KEY=undersound
+LIVEKIT_API_SECRET=replace-with-a-long-random-livekit-secret
+LIVEKIT_URL=wss://livekit.example.com
+LIVEKIT_USE_EXTERNAL_IP=true
+
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=smtp-user
+SMTP_PASS=smtp-password
+SMTP_FROM=noreply@example.com
+
+INITIAL_SUPER_ADMIN_EMAIL=admin@example.com
+INITIAL_SUPER_ADMIN_PASSWORD=replace-with-a-strong-first-password
+```
+
+Generate good secrets on a Linux/macOS host with:
+
+```bash
+openssl rand -hex 32
+```
+
+In PowerShell:
+
+```powershell
+[Convert]::ToHexString((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+```
+
+## 3. Proxy Manager Setup
+
+Use any reverse proxy manager you like, such as Nginx Proxy Manager, Traefik, Caddy, SWAG, or a cloud load balancer.
+
+### App Website
+
+Forward this domain:
+
+```text
+studio.example.com
+```
+
+To:
+
+```text
+http://APP_CONTAINER_OR_HOST:3000
+```
+
+Enable:
+
+- HTTPS
+- WebSocket support
+- forwarded host headers
+- `X-Forwarded-Proto`
+
+If the proxy runs in the same Docker network as the stack, point it to:
+
+```text
+http://app:3000
+```
+
+If the proxy runs outside the stack, point it to the Docker host IP and published port:
+
+```text
+http://YOUR_SERVER_IP:3000
+```
+
+### LiveKit WebSocket
+
+Forward this domain:
+
+```text
+livekit.example.com
+```
+
+To:
+
+```text
+http://LIVEKIT_CONTAINER_OR_HOST:7880
+```
+
+Enable:
+
+- HTTPS
+- WebSocket support
+
+If the proxy runs in the same Docker network as the stack, point it to:
+
+```text
+http://livekit:7880
+```
+
+If the proxy runs outside the stack, point it to:
+
+```text
+http://YOUR_SERVER_IP:7880
+```
+
+Set:
+
+```env
+LIVEKIT_URL=wss://livekit.example.com
+```
+
+## 4. Ports To Open Or Forward
+
+For normal cloud production behind a proxy:
+
+| Port | Protocol | Goes To | Purpose |
+| --- | --- | --- | --- |
+| `80` | TCP | reverse proxy | HTTP certificate challenge / redirect |
+| `443` | TCP | reverse proxy | HTTPS app and LiveKit WebSocket |
+| `7881` | TCP | Docker host / LiveKit | LiveKit RTC over TCP |
+| `50000-50100` | UDP | Docker host / LiveKit | LiveKit RTC media |
+
+The app port `3000` and LiveKit HTTP port `7880` can stay private if your reverse proxy can reach the Docker services. If your proxy is outside Docker, publish/allow them only between the proxy and Docker host.
+
+For LAN testing without a proxy:
+
+| Port | Protocol | Purpose |
+| --- | --- | --- |
+| `3000` | TCP | UnderSound Studio app |
+| `7880` | TCP | LiveKit WebSocket/API |
+| `7881` | TCP | LiveKit RTC over TCP |
+| `50000-50100` | UDP | LiveKit RTC media |
+
+Do not expose PostgreSQL `5432` publicly.
+
+Maildev ports `1080` and `1025` are only for local/staging email testing and should not be public in production.
+
+## 5. First Login
+
+After the stack starts, open:
+
+```text
+https://studio.example.com
+```
+
+or for LAN:
+
+```text
+http://YOUR_SERVER_LAN_IP:3000
+```
+
+Log in with:
+
+```env
+INITIAL_SUPER_ADMIN_EMAIL=admin@example.com
+INITIAL_SUPER_ADMIN_PASSWORD=your-first-password
+```
+
+The initial super admin is only created when no users exist yet.
+
+## 6. QR Codes And Phone Testing
+
+QR links use the host you opened the dashboard with.
+
+- If you open `http://localhost:3000`, QR codes will use `localhost` and phones will not reach them.
+- If you open `http://192.168.1.50:3000`, QR codes will use the LAN IP and phones on the same Wi-Fi can reach them.
+- If you open `https://studio.example.com`, QR codes will use the public cloud domain.
+
+## 7. Updating Later
+
+1. Back up the database.
+2. Back up uploaded media.
+3. Update the stack image/source or paste the newer `docker-compose.yml`.
+4. Keep the same named volumes:
+   - `undersound_db`
+   - `undersound_uploads`
+5. Redeploy the stack.
+
+Do not remove the volumes unless you want to erase users, events, channels, settings, and uploads.
