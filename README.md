@@ -1,4 +1,8 @@
-# UnderSound Studio
+<p align=center><img width="250" height="250" alt="UnderSound-Logo" src="https://github.com/user-attachments/assets/10d7ce40-00fd-4b0c-9e12-8bc87b1fa5e6" /></p>
+
+  
+  
+  # UnderSound Studio
 
 Self-hosted live translation and event audio management.
 
@@ -110,3 +114,15 @@ Do not delete these volumes during redeploys unless you intend to wipe data.
 GNU Affero General Public License v3.0 or later (`AGPL-3.0-or-later`).
 
 See `LICENSE`.
+
+
+
+#Screenshots
+
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/424cb155-8e35-42d9-92f8-a8f575b36dc4" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/802f2f89-ddc5-41b6-9e25-bfb9180d6637" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/c9375823-8236-472d-a89f-aaffdfd215fb" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/f9ab56eb-b6f1-4321-b759-3770a058dc22" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/e95a5163-ef94-4b35-bdd3-85e0a25c92af" />
+
+
