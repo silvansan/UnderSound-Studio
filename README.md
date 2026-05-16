@@ -1,3 +1,6 @@
+<p align="center"><img width="200" height="200" alt="UnderSound-Logo" src="https://github.com/user-attachments/assets/e68fc02b-344d-4800-b52c-8f21df0b063a" /></p>
+
+
 # UnderSound-Studio
 
 > Modern live translation & low-latency event audio platform built with Payload CMS 3, Next.js, TypeScript, LiveKit, and Docker.
