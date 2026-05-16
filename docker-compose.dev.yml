@@ -1,0 +1,28 @@
+# Local development: Postgres + Maildev (app runs on host via `npm run dev`)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: undersound
+      POSTGRES_PASSWORD: undersound
+      POSTGRES_DB: undersound
+    ports:
+      - '5432:5432'
+    volumes:
+      - undersound_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U undersound -d undersound']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  maildev:
+    image: maildev/maildev:2.1.0
+    ports:
+      - '1080:1080'
+      - '1025:1025'
+    profiles:
+      - mail
+
+volumes:
+  undersound_db:

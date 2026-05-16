@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+:root {
+  --us-green-dark: #1a3d2e;
+  --us-green: #2d6a4f;
+  --us-green-light: #52b788;
+  --us-blue: #4ea8de;
+  --us-blue-dark: #1d3557;
+  --us-bg: #f4f7f5;
+  --us-card: #ffffff;
+  --us-text: #1b263b;
+  --us-muted: #6c757d;
+  --us-danger: #c1121f;
+  --us-warning: #e9c46a;
+}
+
+body {
+  background-color: var(--us-bg);
+  color: var(--us-text);
+}

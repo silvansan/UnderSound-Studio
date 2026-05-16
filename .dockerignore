@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+_scaffold-tmp
+package
+create-payload-app-3.84.1.tgz
+data
+*.md
+tests
+playwright-report
+test-results
