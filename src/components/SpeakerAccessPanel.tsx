@@ -1,6 +1,7 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { Room, RoomEvent } from 'livekit-client'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 
 type SpeakerAccessPanelProps = {
   channelSlug: string
@@ -9,16 +10,74 @@ type SpeakerAccessPanelProps = {
   passwordRequired: boolean
 }
 
+type SpeakerTokenResponse = {
+  error?: string
+  token: string
+  url: string
+}
+
+type PublishState = 'idle' | 'loading-devices' | 'connecting' | 'publishing' | 'error'
+
 export function SpeakerAccessPanel({
   channelSlug,
   eventSlug,
   hasAccess: initialHasAccess,
   passwordRequired,
 }: SpeakerAccessPanelProps) {
+  const roomRef = useRef<Room | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [hasAccess, setHasAccess] = useState(initialHasAccess || !passwordRequired)
   const [loading, setLoading] = useState(false)
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([])
+  const [publishMessage, setPublishMessage] = useState<string | null>(null)
+  const [publishState, setPublishState] = useState<PublishState>('idle')
   const [password, setPassword] = useState('')
+  const [selectedDeviceID, setSelectedDeviceID] = useState('')
+
+  useEffect(() => {
+    return () => {
+      roomRef.current?.disconnect()
+      roomRef.current = null
+    }
+  }, [])
+
+  async function loadMicrophones() {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      setPublishState('error')
+      setPublishMessage('This browser does not expose microphone device selection.')
+      return
+    }
+
+    setPublishState('loading-devices')
+    setPublishMessage('Loading microphones...')
+
+    try {
+      await navigator.mediaDevices.getUserMedia({
+        audio: {
+          autoGainControl: false,
+          echoCancellation: false,
+          noiseSuppression: false,
+        },
+      })
+
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const audioInputs = devices.filter((device) => device.kind === 'audioinput')
+      setMicrophones(audioInputs)
+      setSelectedDeviceID((current) => current || audioInputs[0]?.deviceId || '')
+      setPublishState('idle')
+      setPublishMessage(audioInputs.length > 0 ? 'Choose a microphone, then start publishing.' : 'No microphone was found.')
+    } catch (loadError) {
+      console.error('Unable to load microphones', loadError)
+      setPublishState('error')
+      setPublishMessage('Microphone permission was denied or no microphone is available.')
+    }
+  }
+
+  useEffect(() => {
+    if (hasAccess) {
+      void loadMicrophones()
+    }
+  }, [hasAccess])
 
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -46,6 +105,94 @@ export function SpeakerAccessPanel({
 
     setHasAccess(true)
     setPassword('')
+  }
+
+  async function startPublishing() {
+    if (!selectedDeviceID) {
+      setPublishState('error')
+      setPublishMessage('Select a microphone before publishing.')
+      return
+    }
+
+    setPublishState('connecting')
+    setPublishMessage('Requesting speaker token...')
+
+    const response = await fetch('/api/livekit/speaker-token', {
+      body: JSON.stringify({
+        channelSlug,
+        eventSlug,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    })
+
+    const tokenResponse = (await response.json().catch(() => null)) as SpeakerTokenResponse | null
+
+    if (!response.ok || !tokenResponse?.token || !tokenResponse.url) {
+      setPublishState('error')
+      setPublishMessage(tokenResponse?.error ?? 'Unable to get a speaker token for this channel.')
+      return
+    }
+
+    const { token, url } = tokenResponse
+
+    try {
+      roomRef.current?.disconnect()
+
+      const room = new Room({
+        audioCaptureDefaults: {
+          autoGainControl: false,
+          echoCancellation: false,
+          noiseSuppression: false,
+        },
+      })
+      roomRef.current = room
+
+      room.on(RoomEvent.Disconnected, () => {
+        setPublishState('idle')
+        setPublishMessage('Disconnected from the speaker channel.')
+      })
+
+      await room.connect(url, token, {
+        autoSubscribe: true,
+      })
+
+      await room.localParticipant.setMicrophoneEnabled(
+        true,
+        {
+          autoGainControl: false,
+          deviceId: { exact: selectedDeviceID },
+          echoCancellation: false,
+          noiseSuppression: false,
+        },
+        {
+          name: 'speaker-microphone',
+        },
+      )
+
+      setPublishState('publishing')
+      setPublishMessage('Publishing microphone audio with echo cancellation, noise suppression, and auto gain off.')
+    } catch (publishError) {
+      console.error('Speaker publishing failed', publishError)
+      const message = publishError instanceof Error ? publishError.message : null
+      roomRef.current?.disconnect()
+      roomRef.current = null
+      setPublishState('error')
+      setPublishMessage(
+        message
+          ? `Publishing failed: ${message}`
+          : 'Publishing failed. Check microphone permissions, LiveKit settings, and channel availability.',
+      )
+    }
+  }
+
+  function stopPublishing() {
+    roomRef.current?.disconnect()
+    roomRef.current = null
+    setPublishState('idle')
+    setPublishMessage('Publishing stopped.')
   }
 
   if (!hasAccess) {
@@ -91,12 +238,55 @@ export function SpeakerAccessPanel({
         Publish controls
       </h2>
       <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-        LiveKit publishing will use the server token endpoint from Phase 7. The browser audio capture controls below
-        are prepared for the upcoming speaker UI and should default to music-safe settings.
+        Select the microphone to publish to this channel. Browser echo cancellation, noise suppression, and auto gain
+        control stay off by default to preserve music and natural source audio.
       </p>
-      <button type="button" className="us-button-primary mt-5 w-full px-5 py-3 text-sm font-medium">
-        Start publishing audio
-      </button>
+      <label className="mt-5 block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
+        Microphone
+        <select
+          className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
+          disabled={publishState === 'connecting' || publishState === 'publishing'}
+          onChange={(event) => setSelectedDeviceID(event.target.value)}
+          style={{ borderColor: 'var(--us-border)', color: 'var(--us-text)' }}
+          value={selectedDeviceID}
+        >
+          {microphones.length === 0 ? <option value="">No microphone loaded</option> : null}
+          {microphones.map((device, index) => (
+            <option key={device.deviceId || index} value={device.deviceId}>
+              {device.label || `Microphone ${index + 1}`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          className="us-button-secondary px-5 py-3 text-sm font-medium"
+          disabled={publishState === 'loading-devices' || publishState === 'connecting' || publishState === 'publishing'}
+          onClick={loadMicrophones}
+        >
+          Refresh microphones
+        </button>
+        {publishState === 'publishing' ? (
+          <button type="button" className="us-button-primary px-5 py-3 text-sm font-medium" onClick={stopPublishing}>
+            Stop publishing
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="us-button-primary px-5 py-3 text-sm font-medium"
+            disabled={publishState === 'loading-devices' || publishState === 'connecting'}
+            onClick={startPublishing}
+          >
+            {publishState === 'connecting' ? 'Starting...' : 'Start publishing audio'}
+          </button>
+        )}
+      </div>
+      {publishMessage ? (
+        <p className="mt-4 text-sm leading-6" style={{ color: publishState === 'error' ? 'var(--us-danger)' : 'var(--us-muted)' }}>
+          {publishMessage}
+        </p>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border px-4 py-4" style={{ borderColor: 'var(--us-border)' }}>
         <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>

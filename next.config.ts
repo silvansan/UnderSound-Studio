@@ -3,6 +3,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  poweredByHeader: false,
   async redirects() {
     return [
       {
@@ -35,6 +36,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
     localPatterns: [
+      {
+        pathname: '/undersound-logo.png',
+      },
       {
         pathname: '/api/media/file/**',
       },

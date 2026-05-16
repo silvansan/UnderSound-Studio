@@ -1,11 +1,11 @@
-# Local development: Postgres + Maildev (app runs on host via `npm run dev`)
+# Local development: Postgres + LiveKit + Maildev (app runs on host via `npm run dev`)
 services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: undersound
-      POSTGRES_PASSWORD: undersound
-      POSTGRES_DB: undersound
+      POSTGRES_USER: ${POSTGRES_USER:-undersound}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-undersound}
+      POSTGRES_DB: ${POSTGRES_DB:-undersound}
     ports:
       - '5432:5432'
     volumes:
@@ -23,6 +23,29 @@ services:
       - '1025:1025'
     profiles:
       - mail
+
+  livekit:
+    image: livekit/livekit-server:v1.9.1
+    command:
+      - --config-body
+      - |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          use_external_ip: false
+        keys:
+          ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}
+    environment:
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+    ports:
+      - '7880:7880'
+      - '7881:7881'
+      - '50000-50100:50000-50100/udp'
 
 volumes:
   undersound_db:

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 
+import { shouldUseSecureCookies } from '@/lib/cookies'
 import { getPublicChannelContext, isSpeakerPubliclyAvailable } from '@/lib/public-channel'
+import { rateLimitRequest } from '@/lib/rate-limit'
 import {
   createSpeakerSessionToken,
   getSpeakerSessionCookieName,
@@ -28,6 +30,15 @@ async function readBody(request: Request): Promise<VerifySpeakerPasswordBody> {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = rateLimitRequest(request, 'speaker-password', {
+    limit: 10,
+    windowMs: 60_000,
+  })
+
+  if (rateLimited) {
+    return rateLimited
+  }
+
   const body = await readBody(request)
   const eventSlug = parseString(body.eventSlug)
   const channelSlug = parseString(body.channelSlug)
@@ -61,7 +72,7 @@ export async function POST(request: Request) {
     name: getSpeakerSessionCookieName(eventSlug, channelSlug),
     path: '/',
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: shouldUseSecureCookies(),
     value: createSpeakerSessionToken(eventSlug, channelSlug),
   })
 

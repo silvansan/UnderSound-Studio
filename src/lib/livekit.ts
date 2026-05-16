@@ -11,13 +11,62 @@ type LiveKitTokenResponse = {
 function getLiveKitConfig() {
   const apiKey = process.env.LIVEKIT_API_KEY?.trim()
   const apiSecret = process.env.LIVEKIT_API_SECRET?.trim()
-  const url = process.env.LIVEKIT_URL?.trim()
+  const url = normalizeLiveKitURL(process.env.LIVEKIT_URL?.trim())
 
   if (!apiKey || !apiSecret || !url) {
     throw new Error('LiveKit is not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL.')
   }
 
   return { apiKey, apiSecret, url }
+}
+
+function isLocalHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+}
+
+function normalizeLiveKitURL(url: string | undefined): string | undefined {
+  if (!url) {
+    return undefined
+  }
+
+  if (url.startsWith('https://')) {
+    return `wss://${url.slice('https://'.length)}`
+  }
+
+  if (url.startsWith('http://')) {
+    return `ws://${url.slice('http://'.length)}`
+  }
+
+  return url
+}
+
+export function getBrowserLiveKitURL(request: Request): string | undefined {
+  const configuredUrl = normalizeLiveKitURL(process.env.LIVEKIT_URL?.trim())
+
+  if (!configuredUrl) {
+    return undefined
+  }
+
+  const liveKitUrl = new URL(configuredUrl)
+
+  if (!isLocalHost(liveKitUrl.hostname)) {
+    return configuredUrl
+  }
+
+  const requestHost = request.headers.get('x-forwarded-host') || request.headers.get('host')
+
+  if (!requestHost) {
+    return configuredUrl
+  }
+
+  const appHost = requestHost.split(':')[0]
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const protocol = forwardedProto === 'https' ? 'wss:' : liveKitUrl.protocol
+
+  liveKitUrl.hostname = appHost
+  liveKitUrl.protocol = protocol
+
+  return liveKitUrl.toString().replace(/\/$/, '')
 }
 
 export function getLiveKitRoomName(eventSlug: string, channelSlug: string): string {
@@ -32,6 +81,7 @@ export async function createListenerToken(
   roomName: string,
   identity: string,
   ttlSeconds = 3600,
+  browserUrl?: string,
 ): Promise<LiveKitTokenResponse> {
   const { apiKey, apiSecret, url } = getLiveKitConfig()
   const token = new AccessToken(apiKey, apiSecret, {
@@ -49,7 +99,7 @@ export async function createListenerToken(
     expiresIn: ttlSeconds,
     roomName,
     token: await token.toJwt(),
-    url,
+    url: browserUrl ?? url,
   }
 }
 
@@ -58,6 +108,7 @@ export async function createSpeakerToken(
   identity: string,
   ttlSeconds = 3600,
   canSubscribe = true,
+  browserUrl?: string,
 ): Promise<LiveKitTokenResponse> {
   const { apiKey, apiSecret, url } = getLiveKitConfig()
   const token = new AccessToken(apiKey, apiSecret, {
@@ -76,6 +127,6 @@ export async function createSpeakerToken(
     expiresIn: ttlSeconds,
     roomName,
     token: await token.toJwt(),
-    url,
+    url: browserUrl ?? url,
   }
 }

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 
-import { createListenerToken, createLiveKitIdentity } from '@/lib/livekit'
+import { createListenerToken, createLiveKitIdentity, getBrowserLiveKitURL } from '@/lib/livekit'
 import { getPublicChannelContext, isListenerTokenAvailable } from '@/lib/public-channel'
+import { rateLimitRequest } from '@/lib/rate-limit'
 
 type TokenRequestBody = {
   channelSlug?: unknown
@@ -22,6 +23,15 @@ async function readBody(request: Request): Promise<TokenRequestBody> {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = rateLimitRequest(request, 'livekit-listener-token', {
+    limit: 30,
+    windowMs: 60_000,
+  })
+
+  if (rateLimited) {
+    return rateLimited
+  }
+
   const body = await readBody(request)
   const eventSlug = parseString(body.eventSlug)
   const channelSlug = parseString(body.channelSlug)
@@ -45,6 +55,7 @@ export async function POST(request: Request) {
       context.roomName,
       parseString(body.identity) ?? createLiveKitIdentity('listener'),
       context.tokenExpiry,
+      getBrowserLiveKitURL(request),
     )
 
     return NextResponse.json(token)

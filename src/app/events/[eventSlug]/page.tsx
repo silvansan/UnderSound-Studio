@@ -5,8 +5,9 @@ import { ChannelCard } from '@/components/ChannelCard'
 import { Layout } from '@/components/Layout'
 import { QRDrawer } from '@/components/QRDrawer'
 import { getDashboardChannels, getDashboardEvent } from '@/lib/dashboard-data'
-import { getListenerUrl, getSpeakerUrl } from '@/lib/links'
+import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
 import { generateQrDataUrl } from '@/lib/qrcode'
+import { deleteEventAction } from '@/app/events/actions'
 
 type PageProps = {
   params: Promise<{ eventSlug: string }>
@@ -22,10 +23,11 @@ export default async function EventDetailPage({ params }: PageProps) {
     notFound()
   }
 
+  const publicBaseUrl = await getRequestBaseUrl()
   const qrItems = await Promise.all(
     channels.slice(0, 4).map(async (channel) => {
-      const listenerUrl = getListenerUrl(eventSlug, channel.slug)
-      const speakerUrl = getSpeakerUrl(eventSlug, channel.slug)
+      const listenerUrl = getListenerUrl(eventSlug, channel.slug, publicBaseUrl)
+      const speakerUrl = getSpeakerUrl(eventSlug, channel.slug, publicBaseUrl)
       const [listenerQrDataUrl, speakerQrDataUrl] = await Promise.all([
         generateQrDataUrl(listenerUrl),
         generateQrDataUrl(speakerUrl),
@@ -69,6 +71,9 @@ export default async function EventDetailPage({ params }: PageProps) {
               <Link href={`/events/${eventSlug}/settings`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
                 Event settings
               </Link>
+              <Link href={`/events/${eventSlug}/edit`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
+                Edit event
+              </Link>
             </div>
           </article>
 
@@ -98,6 +103,18 @@ export default async function EventDetailPage({ params }: PageProps) {
         </div>
 
         <div className="space-y-4">
+          <article className="us-panel px-6 py-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+              Event actions
+            </p>
+            <form action={deleteEventAction} className="mt-4">
+              <input name="id" type="hidden" value={event.id} />
+              <button type="submit" className="rounded-2xl border px-4 py-2.5 text-sm font-medium" style={{ borderColor: 'var(--us-danger)', color: 'var(--us-danger)' }}>
+                Delete event
+              </button>
+            </form>
+          </article>
+
           {qrItems.length > 0 ? (
             qrItems.map((item) => (
               <div key={item.channel.slug} className="space-y-3">

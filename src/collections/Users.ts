@@ -6,14 +6,56 @@ import {
   generateVerificationEmailHTML,
   generateVerificationEmailSubject,
 } from '@/lib/email'
+import { shouldUseSecureCookies } from '@/lib/cookies'
+import { writeAuditLog } from '@/lib/audit'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 
 export const Users: CollectionConfig = {
   slug: 'users',
   access: {
+    admin: ({ req }) => isSuperAdminUser(req.user),
     create: ({ req }) => isAdminUser(req.user),
-    delete: ({ req }) => isSuperAdminUser(req.user),
+    delete: ({ req }) => {
+      if (isSuperAdminUser(req.user)) {
+        return true
+      }
+
+      if (isAdminUser(req.user)) {
+        return {
+          role: {
+            equals: 'moderator',
+          },
+        } as Where
+      }
+
+      return false
+    },
     read: ({ req }) => {
+      const userID = req.user?.id
+
+      if (isSuperAdminUser(req.user)) {
+        return true
+      }
+
+      if (isAdminUser(req.user)) {
+        return {
+          role: {
+            equals: 'moderator',
+          },
+        } as Where
+      }
+
+      if (!userID) {
+        return false
+      }
+
+      return {
+        id: {
+          equals: userID,
+        },
+      } as Where
+    },
+    update: ({ req }) => {
       const userID = req.user?.id
 
       if (isSuperAdminUser(req.user)) {
@@ -38,23 +80,6 @@ export const Users: CollectionConfig = {
         },
       } as Where
     },
-    update: ({ req }) => {
-      const userID = req.user?.id
-
-      if (isSuperAdminUser(req.user)) {
-        return true
-      }
-
-      if (!userID) {
-        return false
-      }
-
-      return {
-        id: {
-          equals: userID,
-        },
-      } as Where
-    },
   },
   admin: {
     defaultColumns: ['email', 'name', 'role', 'active', 'lastLogin', 'updatedAt'],
@@ -63,7 +88,7 @@ export const Users: CollectionConfig = {
   auth: {
     cookies: {
       sameSite: 'Lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: shouldUseSecureCookies(),
     },
     forgotPassword: {
       expiration: 1000 * 60 * 60,
@@ -271,6 +296,50 @@ export const Users: CollectionConfig = {
         }
 
         return data
+      },
+    ],
+    afterChange: [
+      async ({ doc, operation, previousDoc, req }) => {
+        if (operation === 'create') {
+          await writeAuditLog(req.payload, {
+            action: 'user.created',
+            collection: 'users',
+            documentId: doc.id,
+            metadata: {
+              email: doc.email,
+              role: doc.role,
+            },
+            user: req.user,
+          })
+        }
+
+        if (operation === 'update' && previousDoc?.role !== doc.role) {
+          await writeAuditLog(req.payload, {
+            action: 'user.role_changed',
+            collection: 'users',
+            documentId: doc.id,
+            metadata: {
+              email: doc.email,
+              from: previousDoc?.role,
+              to: doc.role,
+            },
+            user: req.user,
+          })
+        }
+      },
+    ],
+    afterDelete: [
+      async ({ doc, req }) => {
+        await writeAuditLog(req.payload, {
+          action: 'user.deleted',
+          collection: 'users',
+          documentId: doc.id,
+          metadata: {
+            email: doc.email,
+            role: doc.role,
+          },
+          user: req.user,
+        })
       },
     ],
   },

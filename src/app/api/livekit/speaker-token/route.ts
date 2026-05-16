@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-import { createLiveKitIdentity, createSpeakerToken } from '@/lib/livekit'
+import { createLiveKitIdentity, createSpeakerToken, getBrowserLiveKitURL } from '@/lib/livekit'
 import { getPublicChannelContext, isSpeakerPubliclyAvailable, isSpeakerTokenAvailable } from '@/lib/public-channel'
+import { rateLimitRequest } from '@/lib/rate-limit'
 import {
   getSpeakerSessionCookieName,
   speakerPasswordRequired,
@@ -33,6 +34,15 @@ async function readBody(request: Request): Promise<TokenRequestBody> {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = rateLimitRequest(request, 'livekit-speaker-token', {
+    limit: 30,
+    windowMs: 60_000,
+  })
+
+  if (rateLimited) {
+    return rateLimited
+  }
+
   const body = await readBody(request)
   const eventSlug = parseString(body.eventSlug)
   const channelSlug = parseString(body.channelSlug)
@@ -64,6 +74,7 @@ export async function POST(request: Request) {
       parseString(body.identity) ?? createLiveKitIdentity('speaker'),
       context.tokenExpiry,
       parseBoolean(body.canSubscribe) ?? true,
+      getBrowserLiveKitURL(request),
     )
 
     return NextResponse.json(token)

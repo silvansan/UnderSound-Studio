@@ -10,6 +10,7 @@ import {
   joinUrl,
 } from '@/lib/email'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+import { rateLimitRequest } from '@/lib/rate-limit'
 
 type InviteUserBody = {
   email?: unknown
@@ -38,6 +39,15 @@ async function readBody(request: Request): Promise<InviteUserBody> {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = rateLimitRequest(request, 'user-invite', {
+    limit: 10,
+    windowMs: 60_000,
+  })
+
+  if (rateLimited) {
+    return rateLimited
+  }
+
   const payload = await getPayload({ config: configPromise })
   const { user } = await payload.auth({ headers: request.headers })
 

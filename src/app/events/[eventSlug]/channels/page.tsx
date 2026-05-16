@@ -34,6 +34,9 @@ export default async function EventChannelsPage({ params }: PageProps) {
             <Link href={`/events/${eventSlug}`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
               Back to event
             </Link>
+            <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary px-4 py-2.5 text-sm font-medium">
+              Add channel
+            </Link>
           </div>
         </article>
 
@@ -58,8 +61,8 @@ export default async function EventChannelsPage({ params }: PageProps) {
             <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
               No channels exist for this event yet.
             </p>
-            <Link href="/admin/collections/channels/create" className="us-button-primary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
-              Create channel in Payload
+            <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
+              Add channel
             </Link>
           </article>
         )}

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
+import { LogoImage } from './LogoImage'
 
 type LogoProps = {
   className?: string
@@ -16,14 +16,7 @@ export function Logo({ className = '', theme = 'default' }: LogoProps) {
         className="overflow-hidden rounded-2xl border border-white/40 shadow-lg"
         style={{ boxShadow: '0 10px 30px rgba(18, 107, 182, 0.14)' }}
       >
-        <Image
-          src="/undersound-logo.png"
-          alt="UnderSound logo"
-          width={54}
-          height={54}
-          priority
-          className="h-[54px] w-[54px] object-cover"
-        />
+        <LogoImage />
       </span>
       <span className="leading-tight">
         <span className="block text-base font-semibold tracking-tight" style={{ color: titleColor }}>

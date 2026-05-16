@@ -8,22 +8,52 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URI: postgres://undersound:undersound@db:5432/undersound
+      DATABASE_URI: postgres://${POSTGRES_USER:-undersound}:${POSTGRES_PASSWORD:-undersound}@db:5432/${POSTGRES_DB:-undersound}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      PAYLOAD_DB_PUSH: ${PAYLOAD_DB_PUSH:-true}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
+      livekit:
+        condition: service_started
     volumes:
       - undersound_uploads:/app/media
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.9.1
+    command:
+      - --config-body
+      - |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          use_external_ip: false
+        keys:
+          ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}
+    environment:
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+    ports:
+      - '7880:7880'
+      - '7881:7881'
+      - '50000-50100:50000-50100/udp'
     restart: unless-stopped
 
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: undersound
-      POSTGRES_PASSWORD: undersound
-      POSTGRES_DB: undersound
+      POSTGRES_USER: ${POSTGRES_USER:-undersound}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-undersound}
+      POSTGRES_DB: ${POSTGRES_DB:-undersound}
     ports:
       - '5432:5432'
     volumes:

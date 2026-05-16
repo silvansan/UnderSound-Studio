@@ -1,302 +1,105 @@
-<p align="center"><img width="200" height="200" alt="UnderSound-Logo" src="https://github.com/user-attachments/assets/e68fc02b-344d-4800-b52c-8f21df0b063a" /></p>
+# UnderSound Studio
 
+Self-hosted live translation and event audio management.
 
-# UnderSound-Studio
+UnderSound Studio is a Payload CMS 3 + Next.js app for creating events, channels, listener links, speaker links, QR codes, and LiveKit audio rooms. It is built to deploy as one Docker Compose stack with PostgreSQL and LiveKit included.
 
-> Modern live translation & low-latency event audio platform built with Payload CMS 3, Next.js, TypeScript, LiveKit, and Docker.
+Built with Cursor-assisted development.
 
----
+## What It Does
 
-## 🎧 What is UnderSound-Studio?
+- Create events and language/audio channels.
+- Generate listener and speaker links with QR codes.
+- Let speakers publish microphone audio through LiveKit.
+- Let listeners connect from browser or mobile app.
+- Manage users with `super_admin`, `admin`, and `moderator` roles.
+- Keep Payload admin available for super-admin back-office work.
+- Run locally, on LAN, or in cloud from the same Compose stack.
 
-**UnderSound-Studio** is the next-generation rebuild of the UnderSound ecosystem — designed for:
+## Stack
 
-* 🌍 Real-time multilingual event translation
-* 🎤 Speaker & interpreter audio routing
-* 📱 Mobile-friendly listener experience
-* ⚡ Ultra low-latency streaming with WebRTC
-* 🐳 Easy self-hosted Docker deployment
-* 🔐 Modern authentication & event management
-* 🧩 Payload CMS-powered administration
+- Next.js 15
+- Payload CMS 3
+- TypeScript
+- PostgreSQL
+- LiveKit
+- Docker Compose
+- Tailwind CSS
 
-Built for churches, conferences, live productions, and multilingual events.
-
----
-
-# ✨ Features
-
-## Current Foundation (Phase 0)
-
-* ✅ Payload CMS 3 integration
-* ✅ Next.js App Router
-* ✅ TypeScript-first architecture
-* ✅ Dockerized stack
-* ✅ PostgreSQL support
-* ✅ Optional SQLite local development
-* ✅ Event / listener / speaker route placeholders
-* ✅ LiveKit integration stubs
-* ✅ QR code & invite link utilities
-* ✅ Email service scaffolding
-* ✅ Permission & role system groundwork
-
----
-
-# 🧱 Tech Stack
-
-| Layer            | Technology              |
-| ---------------- | ----------------------- |
-| Frontend         | Next.js 15 + React      |
-| CMS              | Payload CMS 3           |
-| Language         | TypeScript              |
-| Realtime Audio   | LiveKit + WebRTC        |
-| Database         | PostgreSQL / SQLite     |
-| Containerization | Docker + Docker Compose |
-| Authentication   | Payload Auth            |
-| Email            | Nodemailer / SMTP       |
-| Styling          | Tailwind CSS            |
-
----
-
-# 🚀 Quick Start (Local Development)
-
-## 1. Clone the repository
-
-```bash
-git clone https://github.com/silvansan/UnderSound-Studio.git
-cd UnderSound-Studio
-```
-
----
-
-## 2. Create environment file
+## Quick Start
 
 ```bash
 cp .env.example .env
+docker compose up -d --build
 ```
 
-SMTP setup help:
-
-```text
-docs/SMTP_SETUP.md
-```
-
----
-
-## 3. Start development services
-
-### PostgreSQL
-
-```bash
-docker compose -f docker-compose.dev.yml up -d db
-```
-
-### Optional Maildev
-
-```bash
-docker compose -f docker-compose.dev.yml --profile mail up -d maildev
-```
-
-Maildev UI:
-
-```text
-http://localhost:1080
-```
-
----
-
-## 4. Install dependencies
-
-```bash
-npm install
-```
-
----
-
-## 5. Run development server
-
-```bash
-npm run dev
-```
-
----
-
-## 6. Open the app
-
-Frontend:
+Open:
 
 ```text
 http://localhost:3000
 ```
 
-Payload Admin:
+For LAN phone testing, open the app from your computer's LAN address instead:
 
 ```text
-http://localhost:3000/admin
+http://192.168.x.x:3000
 ```
 
----
-
-# 🗄 SQLite Mode (Optional)
-
-Perfect for lightweight local testing.
-
-Set inside `.env`:
-
-```env
-PAYLOAD_DATABASE=sqlite
-DATABASE_URI=file:./data/undersound.db
-```
-
----
-
-# 🐳 Docker Production Stack
-
-## Start production-style environment
-
-```bash
-cp .env.example .env
-```
-
-Edit secrets and domain URLs inside `.env`, then:
-
-```bash
-docker compose up --build
-```
-
----
+QR codes use the host you opened the app with, so LAN URLs work on phones and cloud URLs work in production.
 
 ## Included Services
 
-| Service   | Purpose                       |
-| --------- | ----------------------------- |
-| `app`     | Next.js + Payload application |
-| `db`      | PostgreSQL database           |
-| `maildev` | Optional local email testing  |
+- `app`: Next.js + Payload
+- `db`: PostgreSQL
+- `livekit`: self-hosted LiveKit WebRTC server
+- `maildev`: optional local email catcher
 
----
+Persistent volumes:
 
-## Persistent Volumes
+- `undersound_db`
+- `undersound_uploads`
 
-| Volume               | Description             |
-| -------------------- | ----------------------- |
-| `undersound_db`      | PostgreSQL data         |
-| `undersound_uploads` | Uploaded media & assets |
+Do not delete these volumes during redeploys unless you intend to wipe data.
 
----
+## Important Docs
 
-# 📁 Project Structure
+- `docs/ARCHITECTURE.md`
+- `docs/API.md`
+- `docs/ROUTES.md`
+- `docs/LIVEKIT.md`
+- `docs/DEPLOYMENT.md`
+- `docs/PORTAINER.md`
+- `docs/SECURITY.md`
+- `docs/MIGRATION.md`
+- `docs/ANDROID_COMPATIBILITY.md`
+- `docs/MOBILE_LINK_PARSER_UPDATE.md`
+- `docs/TESTING.md`
 
-```text
-src/
-├── app/                # Next.js routes
-├── collections/        # Payload collections
-├── globals/            # Payload globals
-├── lib/
-│   ├── livekit/        # LiveKit utilities
-│   ├── qr/             # QR code helpers
-│   ├── email/          # Email helpers
-│   ├── permissions/    # Access control
-│   └── links/          # Invite links
-├── components/         # Shared UI components
-└── styles/             # Global styling
-```
+## Mobile Compatibility
 
----
-
-# 🛣 Planned Architecture
-
-## Listener Flow
+Stable listener links:
 
 ```text
-QR Code → Event Page → Channel Selection → WebRTC Audio
+/listen/:eventSlug/:channelSlug
 ```
 
----
-
-## Speaker / Interpreter Flow
+The Android/Flutter app should parse these links and load:
 
 ```text
-Login → Speak Page → Select Channel → Publish Audio
+GET /api/public/listen/:eventSlug/:channelSlug
+POST /api/livekit/listener-token
 ```
 
----
+See `docs/MOBILE_LINK_PARSER_UPDATE.md`.
 
-## Admin Flow
+## Production Notes
 
-```text
-Payload Admin → Create Event → Generate Channels → Share QR Codes
-```
+- Change every secret in `.env`.
+- Use HTTPS in production.
+- Point `PUBLIC_BASE_URL` and `NEXT_PUBLIC_APP_URL` to the public app URL.
+- Point `LIVEKIT_URL` to the browser-reachable LiveKit WebSocket URL.
+- Back up `undersound_db` and `undersound_uploads`.
 
----
+## License
 
-# 🔐 Planned Features
-
-## Authentication
-
-* Email login
-* Magic links
-* 2FA support
-* Event invitations
-* Role-based access
-
----
-
-## Audio
-
-* WebRTC primary streaming
-* HLS / Icecast fallback
-* Dynamic channels
-* Low-latency monitoring
-* Mobile background playback
-
----
-
-## Events
-
-* Multi-language rooms
-* QR code access
-* Public/private events
-* Speaker permissions
-* Listener analytics
-
----
-
-# 📚 Development Roadmap
-
-See:
-
-```text
-AGENTS.md
-```
-
-For the complete phased implementation plan.
-
----
-
-# 🤝 Contributing
-
-Contributions, ideas, testing, and architecture discussions are welcome.
-
-```bash
-git checkout -b feature/my-feature
-```
-
-Then open a pull request.
-
----
-
-# 📄 License
-
-MIT License
-
----
-
-# ❤️ Vision
-
-UnderSound-Studio aims to become an open, self-hosted platform for multilingual live events — simple enough for churches, powerful enough for conferences, and flexible enough for production environments.
-
----
-
-# 🌐 Future Goals
-
-* OBS / vMix integrations
+MIT

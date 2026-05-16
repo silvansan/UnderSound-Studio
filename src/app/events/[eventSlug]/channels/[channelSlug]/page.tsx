@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation'
 import { Layout } from '@/components/Layout'
 import { QRDrawer } from '@/components/QRDrawer'
 import { getDashboardChannel } from '@/lib/dashboard-data'
-import { getListenerUrl, getSpeakerUrl } from '@/lib/links'
+import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
 import { generateQrDataUrl } from '@/lib/qrcode'
+import { deleteChannelAction } from '@/app/events/[eventSlug]/channels/actions'
 
 type PageProps = {
   params: Promise<{ eventSlug: string; channelSlug: string }>
@@ -21,8 +22,9 @@ export default async function ChannelDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  const listenerUrl = getListenerUrl(eventSlug, channelSlug)
-  const speakerUrl = getSpeakerUrl(eventSlug, channelSlug)
+  const publicBaseUrl = await getRequestBaseUrl()
+  const listenerUrl = getListenerUrl(eventSlug, channelSlug, publicBaseUrl)
+  const speakerUrl = getSpeakerUrl(eventSlug, channelSlug, publicBaseUrl)
   const [listenerQrDataUrl, speakerQrDataUrl] = await Promise.all([
     generateQrDataUrl(listenerUrl),
     generateQrDataUrl(speakerUrl),
@@ -59,6 +61,9 @@ export default async function ChannelDetailPage({ params }: PageProps) {
               </Link>
               <Link href={`/events/${eventSlug}/settings`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
                 Event settings
+              </Link>
+              <Link href={`/events/${eventSlug}/channels/${channelSlug}/edit`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
+                Edit channel
               </Link>
             </div>
           </article>
@@ -99,14 +104,15 @@ export default async function ChannelDetailPage({ params }: PageProps) {
 
           <article className="us-panel px-6 py-6">
             <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-              Advanced settings
+              Dangerous actions
             </p>
-            <p className="mt-4 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-              Edit channel access, passwords, fallback links, and dangerous actions in Payload admin.
-            </p>
-            <Link href="/admin/collections/channels" className="us-button-secondary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
-              Open channels admin
-            </Link>
+            <form action={deleteChannelAction} className="mt-4">
+              <input name="eventSlug" type="hidden" value={eventSlug} />
+              <input name="id" type="hidden" value={channel.id} />
+              <button type="submit" className="rounded-2xl border px-4 py-2.5 text-sm font-medium" style={{ borderColor: 'var(--us-danger)', color: 'var(--us-danger)' }}>
+                Delete channel
+              </button>
+            </form>
           </article>
         </div>
 

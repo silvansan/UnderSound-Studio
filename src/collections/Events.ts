@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 import { canManageEvent } from '@/access/canManageEvent'
 import { canReadEvent } from '@/access/canReadEvent'
 import { isAdmin } from '@/access/isAdmin'
+import { writeAuditLog } from '@/lib/audit'
 import { hashSpeakerPassword } from '@/lib/speaker-password'
 
 function formatSlug(value: string): string {
@@ -289,6 +290,38 @@ export const Events: CollectionConfig = {
         delete nextData.speakerPassword
 
         return nextData
+      },
+    ],
+    afterChange: [
+      async ({ doc, operation, previousDoc, req }) => {
+        if (operation === 'update' && previousDoc?.speakerPasswordHash !== doc.speakerPasswordHash) {
+          await writeAuditLog(req.payload, {
+            action: 'speaker_password.changed',
+            collection: 'events',
+            documentId: doc.id,
+            event: doc.id,
+            metadata: {
+              scope: 'event',
+              title: doc.title,
+            },
+            user: req.user,
+          })
+        }
+      },
+    ],
+    afterDelete: [
+      async ({ doc, req }) => {
+        await writeAuditLog(req.payload, {
+          action: 'event.deleted',
+          collection: 'events',
+          documentId: doc.id,
+          event: doc.id,
+          metadata: {
+            slug: doc.slug,
+            title: doc.title,
+          },
+          user: req.user,
+        })
       },
     ],
   },

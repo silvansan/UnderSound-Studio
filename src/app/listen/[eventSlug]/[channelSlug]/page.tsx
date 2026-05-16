@@ -15,7 +15,7 @@ export default async function ListenPage({ params }: PageProps) {
   const languageLabel = context?.channel.languageLabel ?? context?.channel.languageCode ?? context?.event.defaultLanguage
 
   return (
-    <Layout title="Listen">
+    <Layout requireAuth={false} title="Listen">
       <section className="mx-auto max-w-2xl">
         <div className="us-panel us-hero-glow relative overflow-hidden px-6 py-8 text-center md:px-8">
           <div className="relative z-10">

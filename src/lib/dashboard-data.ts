@@ -1,6 +1,7 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
+import { requireAppUser } from '@/lib/app-auth'
 import type { Channel, Event } from '@/payload-types'
 
 export type DashboardChannel = Pick<
@@ -8,6 +9,7 @@ export type DashboardChannel = Pick<
   | 'description'
   | 'enabled'
   | 'hlsEnabled'
+  | 'id'
   | 'icecastFallbackUrl'
   | 'languageCode'
   | 'languageLabel'
@@ -28,6 +30,7 @@ export type DashboardEvent = Pick<
   | 'dateStart'
   | 'defaultLanguage'
   | 'description'
+  | 'id'
   | 'location'
   | 'publicListenerEnabled'
   | 'slug'
@@ -42,7 +45,7 @@ export type DashboardSummary = {
   activeEvents: number
   archivedEvents: number
   draftEvents: number
-  recentChannels: (DashboardChannel & { eventSlug: string })[]
+  recentChannels: (DashboardChannel & { eventSlug: string; eventTitle: string })[]
   recentEvents: DashboardEvent[]
   totalChannels: number
 }
@@ -54,6 +57,7 @@ function normalizeEvent(event: Event, channelCount = 0): DashboardEvent {
     dateStart: event.dateStart,
     defaultLanguage: event.defaultLanguage,
     description: event.description,
+    id: event.id,
     location: event.location,
     publicListenerEnabled: event.publicListenerEnabled,
     slug: event.slug,
@@ -68,6 +72,7 @@ function normalizeChannel(channel: Channel): DashboardChannel {
     description: channel.description,
     enabled: channel.enabled,
     hlsEnabled: channel.hlsEnabled,
+    id: channel.id,
     icecastFallbackUrl: channel.icecastFallbackUrl,
     languageCode: channel.languageCode,
     languageLabel: channel.languageLabel,
@@ -83,48 +88,86 @@ function normalizeChannel(channel: Channel): DashboardChannel {
   }
 }
 
-async function getChannelCount(eventID: number): Promise<number> {
-  const payload = await getPayload({ config: configPromise })
-  const channels = await payload.count({
-    collection: 'channels',
-    overrideAccess: true,
-    where: {
-      event: {
-        equals: eventID,
-      },
-    },
-  })
+function isAccessDenied(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    (error as { status?: unknown }).status === 403
+  )
+}
 
-  return channels.totalDocs
+async function getChannelCount(eventID: number, user: Awaited<ReturnType<typeof requireAppUser>>): Promise<number> {
+  const payload = await getPayload({ config: configPromise })
+  try {
+    const channels = await payload.count({
+      collection: 'channels',
+      overrideAccess: false,
+      user,
+      where: {
+        event: {
+          equals: eventID,
+        },
+      },
+    })
+
+    return channels.totalDocs
+  } catch (error) {
+    if (isAccessDenied(error)) {
+      return 0
+    }
+
+    throw error
+  }
 }
 
 export async function getDashboardEvents(limit = 100): Promise<DashboardEvent[]> {
+  const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
-  const events = await payload.find({
-    collection: 'events',
-    depth: 0,
-    limit,
-    overrideAccess: true,
-    pagination: false,
-    sort: '-updatedAt',
-  })
+  let events: { docs: Event[] }
 
-  return Promise.all(events.docs.map(async (event) => normalizeEvent(event, await getChannelCount(event.id))))
+  try {
+    events = await payload.find({
+      collection: 'events',
+      depth: 0,
+      limit,
+      overrideAccess: false,
+      pagination: false,
+      sort: '-updatedAt',
+      user,
+    })
+  } catch (error) {
+    if (isAccessDenied(error)) {
+      return []
+    }
+
+    throw error
+  }
+
+  return Promise.all(events.docs.map(async (event) => normalizeEvent(event, await getChannelCount(event.id, user))))
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
-  const [events, channels] = await Promise.all([
-    getDashboardEvents(6),
-    payload.find({
+  const events = await getDashboardEvents(6)
+  const channels = await payload
+    .find({
       collection: 'channels',
       depth: 1,
       limit: 5,
-      overrideAccess: true,
+      overrideAccess: false,
       pagination: false,
       sort: '-updatedAt',
-    }),
-  ])
+      user,
+    })
+    .catch((error: unknown) => {
+      if (isAccessDenied(error)) {
+        return { docs: [], totalDocs: 0 }
+      }
+
+      throw error
+    })
 
   const allEvents = await getDashboardEvents(1000)
 
@@ -138,6 +181,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       return {
         ...normalizeChannel(channel),
         eventSlug: event?.slug ?? String(channel.event),
+        eventTitle: event?.title ?? String(channel.event),
       }
     }),
     recentEvents: events,
@@ -145,62 +189,129 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   }
 }
 
-export async function getDashboardEvent(eventSlug: string): Promise<DashboardEvent | null> {
+export async function getDashboardAllChannels(limit = 100): Promise<(DashboardChannel & { eventSlug: string; eventTitle: string })[]> {
+  const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
-  const events = await payload.find({
-    collection: 'events',
-    depth: 0,
-    limit: 1,
-    overrideAccess: true,
-    pagination: false,
-    where: {
-      slug: {
-        equals: eventSlug,
-      },
-    },
+  const channels = await payload
+    .find({
+      collection: 'channels',
+      depth: 1,
+      limit,
+      overrideAccess: false,
+      pagination: false,
+      sort: '-updatedAt',
+      user,
+    })
+    .catch((error: unknown) => {
+      if (isAccessDenied(error)) {
+        return { docs: [] }
+      }
+
+      throw error
+    })
+
+  return channels.docs.map((channel) => {
+    const event = typeof channel.event === 'object' ? channel.event : null
+
+    return {
+      ...normalizeChannel(channel),
+      eventSlug: event?.slug ?? String(channel.event),
+      eventTitle: event?.title ?? String(channel.event),
+    }
   })
+}
+
+export async function getDashboardEvent(eventSlug: string): Promise<DashboardEvent | null> {
+  const user = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  let events: { docs: Event[] }
+
+  try {
+    events = await payload.find({
+      collection: 'events',
+      depth: 0,
+      limit: 1,
+      overrideAccess: false,
+      pagination: false,
+      user,
+      where: {
+        slug: {
+          equals: eventSlug,
+        },
+      },
+    })
+  } catch (error) {
+    if (isAccessDenied(error)) {
+      return null
+    }
+
+    throw error
+  }
   const event = events.docs[0]
 
   if (!event) {
     return null
   }
 
-  return normalizeEvent(event, await getChannelCount(event.id))
+  return normalizeEvent(event, await getChannelCount(event.id, user))
 }
 
 export async function getDashboardChannels(eventSlug: string): Promise<DashboardChannel[]> {
+  const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
-  const events = await payload.find({
-    collection: 'events',
-    depth: 0,
-    limit: 1,
-    overrideAccess: true,
-    pagination: false,
-    where: {
-      slug: {
-        equals: eventSlug,
+  let events: { docs: Event[] }
+
+  try {
+    events = await payload.find({
+      collection: 'events',
+      depth: 0,
+      limit: 1,
+      overrideAccess: false,
+      pagination: false,
+      user,
+      where: {
+        slug: {
+          equals: eventSlug,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    if (isAccessDenied(error)) {
+      return []
+    }
+
+    throw error
+  }
   const event = events.docs[0]
 
   if (!event) {
     return []
   }
 
-  const channels = await payload.find({
-    collection: 'channels',
-    depth: 0,
-    limit: 100,
-    overrideAccess: true,
-    pagination: false,
-    sort: 'sortOrder',
-    where: {
-      event: {
-        equals: event.id,
+  let channels: { docs: Channel[] }
+
+  try {
+    channels = await payload.find({
+      collection: 'channels',
+      depth: 0,
+      limit: 100,
+      overrideAccess: false,
+      pagination: false,
+      sort: 'sortOrder',
+      user,
+      where: {
+        event: {
+          equals: event.id,
+        },
       },
-    },
-  })
+    })
+  } catch (error) {
+    if (isAccessDenied(error)) {
+      return []
+    }
+
+    throw error
+  }
 
   return channels.docs.map(normalizeChannel)
 }

@@ -1,16 +1,42 @@
-const baseUrl = () =>
-  process.env.PUBLIC_BASE_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  'http://localhost:3000'
+import { headers } from 'next/headers'
 
-export function getListenerUrl(eventSlug: string, channelSlug: string): string {
-  return `${baseUrl()}/listen/${eventSlug}/${channelSlug}`
+function configuredBaseUrl() {
+  return process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
-export function getSpeakerUrl(eventSlug: string, channelSlug: string): string {
-  return `${baseUrl()}/speak/${eventSlug}/${channelSlug}`
+function isLocalNetworkHost(host: string): boolean {
+  const hostname = host.split(':')[0] ?? host
+
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+  )
 }
 
-export function getEventUrl(eventSlug: string): string {
-  return `${baseUrl()}/events/${eventSlug}`
+export async function getRequestBaseUrl(): Promise<string> {
+  const requestHeaders = await headers()
+  const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host')
+
+  if (!host) {
+    return configuredBaseUrl()
+  }
+
+  const protocol = requestHeaders.get('x-forwarded-proto') || (isLocalNetworkHost(host) ? 'http' : 'https')
+
+  return `${protocol}://${host}`
+}
+
+export function getListenerUrl(eventSlug: string, channelSlug: string, baseUrl = configuredBaseUrl()): string {
+  return `${baseUrl}/listen/${eventSlug}/${channelSlug}`
+}
+
+export function getSpeakerUrl(eventSlug: string, channelSlug: string, baseUrl = configuredBaseUrl()): string {
+  return `${baseUrl}/speak/${eventSlug}/${channelSlug}`
+}
+
+export function getEventUrl(eventSlug: string, baseUrl = configuredBaseUrl()): string {
+  return `${baseUrl}/events/${eventSlug}`
 }
