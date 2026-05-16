@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { UserCircleIcon } from './ActionIcons'
 import { Logo } from './Logo'
 import { getCurrentAppUser, requireAppUser } from '@/lib/app-auth'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
@@ -51,6 +52,20 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
                   </Link>
                 ))}
               </nav>
+
+              <Link
+                href="/profile"
+                className="relative z-10 mt-auto flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm font-medium text-white/92"
+                style={{ borderColor: 'rgba(255,255,255,0.16)', backgroundColor: 'rgba(255,255,255,0.08)' }}
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-white">
+                  <UserCircleIcon />
+                </span>
+                <span>
+                  <span className="block">My profile</span>
+                  <span className="block text-xs font-normal text-white/68">{user?.email}</span>
+                </span>
+              </Link>
 
             </div>
           </aside>

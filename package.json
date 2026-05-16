@@ -2,7 +2,7 @@
   "name": "undersound-v2",
   "version": "0.1.0",
   "description": "UnderSound v2 — Payload CMS 3 + Next.js live translation platform",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",

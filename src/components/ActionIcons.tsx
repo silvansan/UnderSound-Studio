@@ -28,6 +28,21 @@ export function OpenLinkIcon({ className = 'h-4 w-4' }: IconProps) {
   )
 }
 
+export function UserCircleIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+      <path
+        d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 7a7 7 0 0 0-14 0"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+      <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
 export function PlusIcon({ className = 'h-4 w-4' }: IconProps) {
   return (
     <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">

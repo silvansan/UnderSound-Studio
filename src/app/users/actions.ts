@@ -78,7 +78,7 @@ export async function inviteUserAction(formData: FormData) {
 
   await payload.sendEmail({
     html: generateInvitedUserActivationEmailHTML({
-      activationUrl: joinUrl(getBaseUrl(), `/admin/reset/${resetToken ?? ''}`),
+      activationUrl: joinUrl(getBaseUrl(), `/reset-password/${resetToken ?? ''}`),
       email,
     }),
     subject: generateInvitedUserActivationEmailSubject(),

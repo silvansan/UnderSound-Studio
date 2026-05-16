@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     overrideAccess: true,
   })
 
-  const activationUrl = joinUrl(getBaseUrl(), `/admin/reset/${resetToken ?? ''}`)
+  const activationUrl = joinUrl(getBaseUrl(), `/reset-password/${resetToken ?? ''}`)
 
   await payload.sendEmail({
     html: generateInvitedUserActivationEmailHTML({

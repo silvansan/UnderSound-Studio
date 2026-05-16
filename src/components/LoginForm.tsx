@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function getSafeNextPath(value: string | null): string {
@@ -89,6 +90,11 @@ export function LoginForm() {
       <button disabled={loading} type="submit" className="us-button-primary w-full px-5 py-3 text-sm font-medium">
         {loading ? 'Signing in...' : 'Sign in to UnderSound'}
       </button>
+      <div className="text-center">
+        <Link href="/forgot-password" className="text-sm font-medium" style={{ color: 'var(--us-blue-dark)' }}>
+          Lost password?
+        </Link>
+      </div>
       {loading ? (
         <p className="text-center text-xs" style={{ color: 'var(--us-muted)' }}>
           First login after a rebuild can take a few seconds.

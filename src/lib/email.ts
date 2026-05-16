@@ -154,7 +154,7 @@ export function generateVerificationEmailSubject() {
 export function generateForgotPasswordEmailHTML({ token, user }: Partial<AuthEmailArgs> = {}) {
   const email = typeof user?.email === 'string' ? user.email : 'your account'
   const safeToken = token ?? ''
-  const url = joinUrl(getBaseUrl(), `/admin/reset/${safeToken}`)
+  const url = joinUrl(getBaseUrl(), `/reset-password/${safeToken}`)
 
   return renderEmailShell({
     ctaLabel: 'Reset password',

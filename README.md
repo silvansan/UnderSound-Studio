@@ -6,6 +6,12 @@ UnderSound Studio is a Payload CMS 3 + Next.js app for creating events, channels
 
 Built with Cursor-assisted development.
 
+## Purpose
+
+UnderSound Studio is intended to provide accessible live translation and event-audio tools for charity organizations, churches, community groups, and low-income associations.
+
+The project is not intended to be commercially exploited in ways that take advantage of those communities. Commercial use is discouraged unless it directly supports this mission, contributes improvements back, or is arranged with the project maintainer.
+
 ## What It Does
 
 - Create events and language/audio channels.
@@ -101,4 +107,6 @@ Do not delete these volumes during redeploys unless you intend to wipe data.
 
 ## License
 
-MIT
+GNU Affero General Public License v3.0 or later (`AGPL-3.0-or-later`).
+
+See `LICENSE`.

@@ -1,0 +1,32 @@
+import Link from 'next/link'
+
+import { ForgotPasswordForm } from '@/components/ForgotPasswordForm'
+import { Layout } from '@/components/Layout'
+
+export const dynamic = 'force-dynamic'
+
+export default function ForgotPasswordPage() {
+  return (
+    <Layout requireAuth={false} title="Reset Password">
+      <section className="mx-auto max-w-xl">
+        <article className="us-panel px-6 py-7 md:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+            Account recovery
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
+            Send a password reset link
+          </h2>
+          <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
+            Enter your account email. If the account exists, UnderSound will email a secure reset link.
+          </p>
+          <div className="mt-6">
+            <ForgotPasswordForm />
+          </div>
+          <Link href="/" className="mt-5 inline-flex text-sm font-medium" style={{ color: 'var(--us-blue-dark)' }}>
+            Back to login
+          </Link>
+        </article>
+      </section>
+    </Layout>
+  )
+}
