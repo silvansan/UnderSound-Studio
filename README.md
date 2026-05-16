@@ -69,6 +69,14 @@ http://192.168.x.x:3000
 
 QR codes use the host you opened the app with, so LAN URLs work on phones and cloud URLs work in production.
 
+## Mobile App
+
+Android APK downloads are published through the UnderSound Mobile GitHub Releases page:
+
+```text
+https://github.com/silvansan/UnderSound-Mobile/releases
+```
+
 ## Included Services
 
 - `app`: Next.js + Payload

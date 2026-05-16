@@ -15,6 +15,7 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
   const user = requireAuth ? await requireAppUser() : await getCurrentAppUser()
   const showAppMenu = Boolean(user)
   const showPayloadAdmin = user ? isSuperAdminUser(user) : false
+  const currentYear = new Date().getFullYear()
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', show: true },
     { href: '/events', label: 'Events', show: true },
@@ -45,8 +46,13 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="min-w-[120px] flex-1 rounded-2xl border px-4 py-3 text-sm font-medium text-white/92 xl:block xl:w-full"
-                    style={{ borderColor: 'rgba(255,255,255,0.16)', backgroundColor: 'rgba(255,255,255,0.06)' }}
+                    className="min-w-[120px] flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold xl:block xl:w-full"
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.09)',
+                      borderColor: 'rgba(255,255,255,0.24)',
+                      color: 'rgba(255,255,255,0.96)',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.18)',
+                    }}
                   >
                     {item.label}
                   </Link>
@@ -55,15 +61,22 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
 
               <Link
                 href="/profile"
-                className="relative z-10 mt-auto flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm font-medium text-white/92"
-                style={{ borderColor: 'rgba(255,255,255,0.16)', backgroundColor: 'rgba(255,255,255,0.08)' }}
+                className="relative z-10 mt-auto flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm font-semibold"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderColor: 'rgba(255,255,255,0.24)',
+                  color: 'rgba(255,255,255,0.96)',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.18)',
+                }}
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white">
                   <UserCircleIcon />
                 </span>
                 <span>
                   <span className="block">My profile</span>
-                  <span className="block text-xs font-normal text-white/68">{user?.email}</span>
+                  <span className="block text-xs font-normal" style={{ color: 'rgba(255,255,255,0.74)' }}>
+                    {user?.email}
+                  </span>
                 </span>
               </Link>
 
@@ -92,6 +105,41 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
           </header>
 
           <main className="min-w-0 flex-1">{children}</main>
+
+          <footer className="us-panel px-5 py-4 text-xs md:px-6" style={{ color: 'var(--us-muted)' }}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p>Copyright © {currentYear} UnderSound Studio</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                <a
+                  className="font-medium"
+                  href="https://github.com/silvansan/UnderSound-Studio"
+                  rel="noreferrer"
+                  style={{ color: 'var(--us-blue-dark)' }}
+                  target="_blank"
+                >
+                  Source code
+                </a>
+                <a
+                  className="font-medium"
+                  href="https://github.com/silvansan/UnderSound-Studio/blob/main/LICENSE"
+                  rel="noreferrer"
+                  style={{ color: 'var(--us-blue-dark)' }}
+                  target="_blank"
+                >
+                  License: AGPLv3
+                </a>
+                <a
+                  className="font-medium"
+                  href="https://github.com/silvansan/UnderSound-Mobile/releases"
+                  rel="noreferrer"
+                  style={{ color: 'var(--us-blue-dark)' }}
+                  target="_blank"
+                >
+                  Download Android app
+                </a>
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     </div>

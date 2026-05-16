@@ -20,6 +20,8 @@ export default async function SettingsPage() {
         overrideAccess: true,
       })
     : null
+  const publicBaseUrl = settings?.publicBaseUrl || process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+  const livekitPublicUrl = settings?.livekitPublicUrl || process.env.LIVEKIT_PUBLIC_URL || process.env.LIVEKIT_URL || ''
 
   return (
     <Layout title="Settings">
@@ -65,7 +67,7 @@ export default async function SettingsPage() {
               Public base URL
               <input
                 className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-                defaultValue={settings.publicBaseUrl ?? ''}
+                defaultValue={publicBaseUrl}
                 name="publicBaseUrl"
                 placeholder="https://studio.example.com"
                 style={{ borderColor: 'var(--us-border)' }}
@@ -77,7 +79,7 @@ export default async function SettingsPage() {
               LiveKit public URL
               <input
                 className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-                defaultValue={settings.livekitPublicUrl ?? ''}
+                defaultValue={livekitPublicUrl}
                 name="livekitPublicUrl"
                 placeholder="wss://livekit.example.com"
                 style={{ borderColor: 'var(--us-border)' }}
