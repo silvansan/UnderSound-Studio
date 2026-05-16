@@ -1,4 +1,7 @@
 import type { Access } from 'payload'
 
-/** Placeholder — full event assignment checks in Phase 3 */
-export const canManageEvent: Access = () => false
+import { getManageableEventWhere } from '@/lib/permissions'
+
+export const canManageEvent: Access = async ({ req }) => {
+  return getManageableEventWhere(req)
+}

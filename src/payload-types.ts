@@ -135,10 +135,27 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
-  name?: string | null;
+  name: string;
   role: 'super_admin' | 'admin' | 'moderator';
   active?: boolean | null;
   preferredLanguage?: string | null;
+  lastLogin?: string | null;
+  invitationStatus?: ('none' | 'pending' | 'accepted' | 'expired') | null;
+  invitedAt?: string | null;
+  invitationAcceptedAt?: string | null;
+  invitedBy?: (number | null) | User;
+  /**
+   * Reserved for a future 2FA flow.
+   */
+  twoFactorEnabled?: boolean | null;
+  /**
+   * Reserved for future 2FA method selection.
+   */
+  twoFactorMethod?: ('app' | 'email') | null;
+  /**
+   * Reserved for an encrypted future 2FA secret. Do not populate until encryption is implemented.
+   */
+  twoFactorSecret?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -146,6 +163,8 @@ export interface User {
   resetPasswordExpiration?: string | null;
   salt?: string | null;
   hash?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -187,6 +206,49 @@ export interface Event {
   slug: string;
   description?: string | null;
   status?: ('draft' | 'active' | 'archived') | null;
+  eventLogo?: (number | null) | Media;
+  dateStart?: string | null;
+  dateEnd?: string | null;
+  location?: string | null;
+  defaultLanguage?: string | null;
+  publicListenerEnabled?: boolean | null;
+  listenerPasswordEnabled?: boolean | null;
+  listenerPasswordHash?: string | null;
+  speakerPasswordEnabled?: boolean | null;
+  /**
+   * Enter a new event-level speaker password. Only a secure hash is stored.
+   */
+  speakerPassword?: string | null;
+  speakerPasswordHash?: string | null;
+  /**
+   * Derived from event assignments.
+   */
+  assignedAdmins?: (number | User)[] | null;
+  /**
+   * Derived from event assignments.
+   */
+  assignedModerators?: (number | User)[] | null;
+  /**
+   * Automatically synchronized from the Channels collection.
+   */
+  channels?: (number | Channel)[] | null;
+  qrSettings?: {
+    foregroundColor?: string | null;
+    backgroundColor?: string | null;
+    includeBlueAccent?: boolean | null;
+  };
+  themeOverride?: {
+    enabled?: boolean | null;
+    greenDark?: string | null;
+    green?: string | null;
+    greenLight?: string | null;
+    blue?: string | null;
+    blueDark?: string | null;
+    background?: string | null;
+    card?: string | null;
+    text?: string | null;
+  };
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -201,7 +263,30 @@ export interface Channel {
   slug: string;
   languageCode?: string | null;
   languageLabel?: string | null;
+  description?: string | null;
   enabled?: boolean | null;
+  sortOrder?: number | null;
+  /**
+   * Compatibility room name if older clients depend on it.
+   */
+  roomName?: string | null;
+  /**
+   * Server-side LiveKit room name.
+   */
+  livekitRoomName?: string | null;
+  webrtcEnabled?: boolean | null;
+  hlsEnabled?: boolean | null;
+  icecastFallbackUrl?: string | null;
+  listenerPageEnabled?: boolean | null;
+  speakerPageEnabled?: boolean | null;
+  listenerTokenMode?: ('public' | 'password' | 'private') | null;
+  speakerPasswordEnabled?: boolean | null;
+  /**
+   * Enter a new channel-level speaker password. Only a secure hash is stored.
+   */
+  speakerPassword?: string | null;
+  speakerPasswordHash?: string | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -214,6 +299,13 @@ export interface EventAssignment {
   user: number | User;
   event: number | Event;
   roleForEvent: 'admin' | 'moderator' | 'viewer';
+  permissions?: {
+    canEditEvent?: boolean | null;
+    canCreateChannels?: boolean | null;
+    canDeleteChannels?: boolean | null;
+    canViewQR?: boolean | null;
+    canManageSpeakerPassword?: boolean | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -340,6 +432,14 @@ export interface UsersSelect<T extends boolean = true> {
   role?: T;
   active?: T;
   preferredLanguage?: T;
+  lastLogin?: T;
+  invitationStatus?: T;
+  invitedAt?: T;
+  invitationAcceptedAt?: T;
+  invitedBy?: T;
+  twoFactorEnabled?: T;
+  twoFactorMethod?: T;
+  twoFactorSecret?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -347,6 +447,8 @@ export interface UsersSelect<T extends boolean = true> {
   resetPasswordExpiration?: T;
   salt?: T;
   hash?: T;
+  _verified?: T;
+  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:
@@ -384,6 +486,41 @@ export interface EventsSelect<T extends boolean = true> {
   slug?: T;
   description?: T;
   status?: T;
+  eventLogo?: T;
+  dateStart?: T;
+  dateEnd?: T;
+  location?: T;
+  defaultLanguage?: T;
+  publicListenerEnabled?: T;
+  listenerPasswordEnabled?: T;
+  listenerPasswordHash?: T;
+  speakerPasswordEnabled?: T;
+  speakerPassword?: T;
+  speakerPasswordHash?: T;
+  assignedAdmins?: T;
+  assignedModerators?: T;
+  channels?: T;
+  qrSettings?:
+    | T
+    | {
+        foregroundColor?: T;
+        backgroundColor?: T;
+        includeBlueAccent?: T;
+      };
+  themeOverride?:
+    | T
+    | {
+        enabled?: T;
+        greenDark?: T;
+        green?: T;
+        greenLight?: T;
+        blue?: T;
+        blueDark?: T;
+        background?: T;
+        card?: T;
+        text?: T;
+      };
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -397,7 +534,21 @@ export interface ChannelsSelect<T extends boolean = true> {
   slug?: T;
   languageCode?: T;
   languageLabel?: T;
+  description?: T;
   enabled?: T;
+  sortOrder?: T;
+  roomName?: T;
+  livekitRoomName?: T;
+  webrtcEnabled?: T;
+  hlsEnabled?: T;
+  icecastFallbackUrl?: T;
+  listenerPageEnabled?: T;
+  speakerPageEnabled?: T;
+  listenerTokenMode?: T;
+  speakerPasswordEnabled?: T;
+  speakerPassword?: T;
+  speakerPasswordHash?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -409,6 +560,15 @@ export interface EventAssignmentsSelect<T extends boolean = true> {
   user?: T;
   event?: T;
   roleForEvent?: T;
+  permissions?:
+    | T
+    | {
+        canEditEvent?: T;
+        canCreateChannels?: T;
+        canDeleteChannels?: T;
+        canViewQR?: T;
+        canManageSpeakerPassword?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -474,10 +634,24 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 export interface SiteSetting {
   id: number;
   siteName?: string | null;
+  defaultLogo?: (number | null) | Media;
   publicBaseUrl?: string | null;
   supportEmail?: string | null;
   allowPublicListenerPages?: boolean | null;
+  requireEmailVerification?: boolean | null;
+  defaultTokenExpiry?: number | null;
   livekitPublicUrl?: string | null;
+  defaultQrStyle?: ('undersound-default' | 'high-contrast') | null;
+  defaultThemeColors?: {
+    greenDark?: string | null;
+    green?: string | null;
+    greenLight?: string | null;
+    blue?: string | null;
+    blueDark?: string | null;
+    background?: string | null;
+    card?: string | null;
+    text?: string | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -487,10 +661,26 @@ export interface SiteSetting {
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
   siteName?: T;
+  defaultLogo?: T;
   publicBaseUrl?: T;
   supportEmail?: T;
   allowPublicListenerPages?: T;
+  requireEmailVerification?: T;
+  defaultTokenExpiry?: T;
   livekitPublicUrl?: T;
+  defaultQrStyle?: T;
+  defaultThemeColors?:
+    | T
+    | {
+        greenDark?: T;
+        green?: T;
+        greenLight?: T;
+        blue?: T;
+        blueDark?: T;
+        background?: T;
+        card?: T;
+        text?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

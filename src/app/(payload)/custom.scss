@@ -1,0 +1,75 @@
+:root {
+  --theme-bg: #eef5f4;
+  --theme-text: #15313a;
+  --theme-elevation-0: #fcfffd;
+  --theme-elevation-50: #f5fbfa;
+  --theme-elevation-100: #e6f1ef;
+  --theme-elevation-150: #d9ebe6;
+  --theme-elevation-200: #c2d9d3;
+  --theme-elevation-300: #8ca6a0;
+  --theme-elevation-400: #5d7680;
+  --theme-elevation-500: #4f6770;
+  --theme-elevation-600: #315d68;
+  --theme-elevation-700: #1e4f66;
+  --theme-elevation-800: #163f35;
+  --theme-elevation-900: #103129;
+  --theme-elevation-950: #0c2620;
+  --theme-success-100: #dff4e9;
+  --theme-success-600: #2f8f63;
+  --theme-warning-100: #fff2cf;
+  --theme-warning-600: #8b6200;
+  --theme-error-100: #fbe4e4;
+  --theme-error-600: #a83232;
+  --theme-input-bg: #fcfffd;
+  --theme-overlay: rgba(12, 38, 32, 0.55);
+}
+
+html,
+body {
+  background:
+    radial-gradient(circle at top, rgba(120, 200, 80, 0.16), transparent 22%),
+    linear-gradient(180deg, #f7fbfa 0%, #eef5f4 100%);
+}
+
+.template-default,
+.template-login,
+.create-first-user,
+.logout,
+.verify {
+  background: transparent;
+}
+
+.template-login .card,
+.create-first-user,
+.logout__wrap,
+.verify__wrap,
+.payload-settings,
+.dashboard,
+.collection-list,
+.doc-controls,
+.render-fields,
+.list-controls,
+.table,
+.card {
+  border-radius: 18px;
+}
+
+.template-login .card,
+.create-first-user,
+.logout__wrap,
+.verify__wrap {
+  background: rgba(252, 255, 253, 0.92);
+  box-shadow: 0 20px 50px rgba(18, 107, 182, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.btn--style-primary {
+  --bg-color: #163f35;
+  --hover-bg: #126bb6;
+  --color: #fff;
+}
+
+.btn--style-secondary,
+.btn--style-subtle {
+  --hover-color: #126bb6;
+}

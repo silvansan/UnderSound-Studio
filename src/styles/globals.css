@@ -1,20 +1,143 @@
 @import 'tailwindcss';
 
 :root {
-  --us-green-dark: #1a3d2e;
-  --us-green: #2d6a4f;
-  --us-green-light: #52b788;
-  --us-blue: #4ea8de;
-  --us-blue-dark: #1d3557;
-  --us-bg: #f4f7f5;
-  --us-card: #ffffff;
-  --us-text: #1b263b;
-  --us-muted: #6c757d;
-  --us-danger: #c1121f;
-  --us-warning: #e9c46a;
+  --us-green-dark: #163f35;
+  --us-green: #2f8f63;
+  --us-green-light: #78c850;
+  --us-blue: #26a7f2;
+  --us-blue-dark: #126bb6;
+  --us-bg: #eef5f4;
+  --us-card: #fcfffd;
+  --us-text: #15313a;
+  --us-muted: #5d7680;
+  --us-danger: #c74848;
+  --us-warning: #e8b84d;
+  --us-border: rgba(22, 63, 53, 0.14);
+  --us-shadow: 0 18px 40px rgba(18, 107, 182, 0.08);
+  --us-shadow-soft: 0 10px 24px rgba(22, 63, 53, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background:
+    radial-gradient(circle at top, rgba(120, 200, 80, 0.18), transparent 28%),
+    linear-gradient(180deg, #f7fbfa 0%, var(--us-bg) 100%);
 }
 
 body {
+  margin: 0;
+  min-height: 100vh;
   background-color: var(--us-bg);
   color: var(--us-text);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+a {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+button:hover,
+a:hover {
+  transform: translateY(-1px);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--us-blue) 70%, white 30%);
+  outline-offset: 2px;
+}
+
+.us-panel {
+  border: 1px solid var(--us-border);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(252, 255, 253, 0.92)),
+    var(--us-card);
+  box-shadow: var(--us-shadow-soft);
+}
+
+.us-button-primary {
+  border-radius: 0.95rem;
+  background: linear-gradient(135deg, var(--us-green) 0%, var(--us-blue-dark) 100%);
+  color: white;
+  box-shadow: 0 12px 24px rgba(18, 107, 182, 0.18);
+}
+
+.us-button-secondary {
+  border: 1px solid rgba(38, 167, 242, 0.18);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--us-blue-dark);
+  box-shadow: var(--us-shadow-soft);
+}
+
+.us-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.us-chip-muted {
+  background: rgba(47, 143, 99, 0.08);
+  color: var(--us-green-dark);
+}
+
+.us-chip-blue {
+  background: rgba(38, 167, 242, 0.1);
+  color: var(--us-blue-dark);
+}
+
+.us-chip-warning {
+  background: rgba(232, 184, 77, 0.18);
+  color: #7d5900;
+}
+
+.us-hero-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.us-hero-glow::before {
+  content: '';
+  position: absolute;
+  inset: -20% auto auto -10%;
+  height: 14rem;
+  width: 14rem;
+  border-radius: 999px;
+  background: rgba(47, 143, 99, 0.22);
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.us-hero-glow::after {
+  content: '';
+  position: absolute;
+  right: -8%;
+  bottom: -18%;
+  height: 16rem;
+  width: 16rem;
+  border-radius: 999px;
+  background: rgba(38, 167, 242, 0.18);
+  filter: blur(54px);
+  pointer-events: none;
 }

@@ -16,6 +16,8 @@ import { Events } from './collections/Events'
 import { Media } from './collections/Media'
 import { Users } from './collections/Users'
 import { SiteSettings } from './globals/SiteSettings'
+import { ensureInitialSuperAdmin } from './lib/bootstrap'
+import { buildEmailAdapter } from './lib/email'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -28,7 +30,7 @@ function requirePayloadSecret(): string {
   const secret = process.env.PAYLOAD_SECRET?.trim()
   if (!secret) {
     throw new Error(
-      'PAYLOAD_SECRET is missing or empty. Set it in .env (see .env.example). Use a long random string — at least 32 characters in production.',
+      'PAYLOAD_SECRET is missing or empty. Set it in .env (see .env.example). Use a long random string - at least 32 characters in production.',
     )
   }
   return secret
@@ -42,12 +44,6 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Events, Channels, EventAssignments, AuditLogs],
-  globals: [SiteSettings],
-  editor: lexicalEditor(),
-  secret: requirePayloadSecret(),
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
   db: useSqlite
     ? sqliteAdapter({
         client: {
@@ -59,6 +55,16 @@ export default buildConfig({
           connectionString: databaseUri,
         },
       }),
-  sharp,
+  editor: lexicalEditor(),
+  email: await buildEmailAdapter(),
+  globals: [SiteSettings],
+  onInit: ensureInitialSuperAdmin,
   plugins: [],
+  secret: requirePayloadSecret(),
+  serverURL:
+    process.env.PUBLIC_BASE_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || undefined,
+  sharp,
+  typescript: {
+    outputFile: path.resolve(dirname, 'payload-types.ts'),
+  },
 })

@@ -74,6 +74,12 @@ cd UnderSound-Studio
 cp .env.example .env
 ```
 
+SMTP setup help:
+
+```text
+docs/SMTP_SETUP.md
+```
+
 ---
 
 ## 3. Start development services

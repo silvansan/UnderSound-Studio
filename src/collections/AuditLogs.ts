@@ -1,7 +1,15 @@
 import type { CollectionConfig } from 'payload'
 
+import { isSuperAdmin } from '@/access/isSuperAdmin'
+
 export const AuditLogs: CollectionConfig = {
   slug: 'audit-logs',
+  access: {
+    create: () => false,
+    delete: () => false,
+    read: isSuperAdmin,
+    update: () => false,
+  },
   admin: {
     useAsTitle: 'action',
     defaultColumns: ['action', 'user', 'collection', 'createdAt'],

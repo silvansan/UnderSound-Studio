@@ -1,20 +1,38 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 type LogoProps = {
   className?: string
+  theme?: 'default' | 'light'
 }
 
-export function Logo({ className = '' }: LogoProps) {
+export function Logo({ className = '', theme = 'default' }: LogoProps) {
+  const titleColor = theme === 'light' ? 'white' : 'var(--us-green-dark)'
+  const subtitleColor = theme === 'light' ? 'rgba(255,255,255,0.78)' : 'var(--us-blue-dark)'
+
   return (
-    <Link href="/" className={`inline-flex items-center gap-2 font-semibold ${className}`}>
+    <Link href="/" className={`inline-flex items-center gap-3 font-semibold ${className}`}>
       <span
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white"
-        style={{ backgroundColor: 'var(--us-green)' }}
-        aria-hidden
+        className="overflow-hidden rounded-2xl border border-white/40 shadow-lg"
+        style={{ boxShadow: '0 10px 30px rgba(18, 107, 182, 0.14)' }}
       >
-        US
+        <Image
+          src="/undersound-logo.png"
+          alt="UnderSound logo"
+          width={54}
+          height={54}
+          priority
+          className="h-[54px] w-[54px] object-cover"
+        />
       </span>
-      <span style={{ color: 'var(--us-green-dark)' }}>UnderSound</span>
+      <span className="leading-tight">
+        <span className="block text-base font-semibold tracking-tight" style={{ color: titleColor }}>
+          UnderSound
+        </span>
+        <span className="block text-xs font-medium uppercase tracking-[0.16em]" style={{ color: subtitleColor }}>
+          Live Audio Studio
+        </span>
+      </span>
     </Link>
   )
 }
