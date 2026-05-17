@@ -1,13 +1,20 @@
 'use client'
 
 import { Room, RoomEvent } from 'livekit-client'
-import { FormEvent, useEffect, useRef, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
 type SpeakerAccessPanelProps = {
+  audioQualityDefaults?: AudioQualityControls
   channelSlug: string
   eventSlug: string
   hasAccess: boolean
   passwordRequired: boolean
+}
+
+type AudioQualityControls = {
+  autoGainControl: boolean
+  echoCancellation: boolean
+  noiseSuppression: boolean
 }
 
 type SpeakerTokenResponse = {
@@ -19,6 +26,7 @@ type SpeakerTokenResponse = {
 type PublishState = 'idle' | 'loading-devices' | 'connecting' | 'publishing' | 'error'
 
 export function SpeakerAccessPanel({
+  audioQualityDefaults,
   channelSlug,
   eventSlug,
   hasAccess: initialHasAccess,
@@ -33,6 +41,27 @@ export function SpeakerAccessPanel({
   const [publishState, setPublishState] = useState<PublishState>('idle')
   const [password, setPassword] = useState('')
   const [selectedDeviceID, setSelectedDeviceID] = useState('')
+  const [audioQuality, setAudioQuality] = useState<AudioQualityControls>({
+    autoGainControl: audioQualityDefaults?.autoGainControl ?? false,
+    echoCancellation: audioQualityDefaults?.echoCancellation ?? false,
+    noiseSuppression: audioQualityDefaults?.noiseSuppression ?? false,
+  })
+
+  const audioConstraints = useCallback((deviceID?: string): MediaTrackConstraints => {
+    return {
+      autoGainControl: audioQuality.autoGainControl,
+      deviceId: deviceID ? { exact: deviceID } : undefined,
+      echoCancellation: audioQuality.echoCancellation,
+      noiseSuppression: audioQuality.noiseSuppression,
+    }
+  }, [audioQuality])
+
+  function updateAudioQuality(key: keyof AudioQualityControls, value: boolean) {
+    setAudioQuality((current) => ({
+      ...current,
+      [key]: value,
+    }))
+  }
 
   useEffect(() => {
     return () => {
@@ -41,7 +70,7 @@ export function SpeakerAccessPanel({
     }
   }, [])
 
-  async function loadMicrophones() {
+  const loadMicrophones = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) {
       setPublishState('error')
       setPublishMessage('This browser does not expose microphone device selection.')
@@ -53,11 +82,7 @@ export function SpeakerAccessPanel({
 
     try {
       await navigator.mediaDevices.getUserMedia({
-        audio: {
-          autoGainControl: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-        },
+        audio: audioConstraints(),
       })
 
       const devices = await navigator.mediaDevices.enumerateDevices()
@@ -71,13 +96,13 @@ export function SpeakerAccessPanel({
       setPublishState('error')
       setPublishMessage('Microphone permission was denied or no microphone is available.')
     }
-  }
+  }, [audioConstraints])
 
   useEffect(() => {
     if (hasAccess) {
       void loadMicrophones()
     }
-  }, [hasAccess])
+  }, [hasAccess, loadMicrophones])
 
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -142,11 +167,7 @@ export function SpeakerAccessPanel({
       roomRef.current?.disconnect()
 
       const room = new Room({
-        audioCaptureDefaults: {
-          autoGainControl: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-        },
+        audioCaptureDefaults: audioConstraints(),
       })
       roomRef.current = room
 
@@ -161,19 +182,14 @@ export function SpeakerAccessPanel({
 
       await room.localParticipant.setMicrophoneEnabled(
         true,
-        {
-          autoGainControl: false,
-          deviceId: { exact: selectedDeviceID },
-          echoCancellation: false,
-          noiseSuppression: false,
-        },
+        audioConstraints(selectedDeviceID),
         {
           name: 'speaker-microphone',
         },
       )
 
       setPublishState('publishing')
-      setPublishMessage('Publishing microphone audio with echo cancellation, noise suppression, and auto gain off.')
+      setPublishMessage('Publishing microphone audio with the selected audio quality controls.')
     } catch (publishError) {
       console.error('Speaker publishing failed', publishError)
       const message = publishError instanceof Error ? publishError.message : null
@@ -239,7 +255,7 @@ export function SpeakerAccessPanel({
       </h2>
       <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
         Select the microphone to publish to this channel. Browser echo cancellation, noise suppression, and auto gain
-        control stay off by default to preserve music and natural source audio.
+        control stay off by default, to preserve music and natural source audio.
       </p>
       <label className="mt-5 block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
         Microphone
@@ -290,16 +306,25 @@ export function SpeakerAccessPanel({
 
       <div className="mt-6 rounded-2xl border px-4 py-4" style={{ borderColor: 'var(--us-border)' }}>
         <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-          Future audio quality controls
+          Audio quality controls
+        </p>
+        <p className="mt-2 text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
+          These affect this speaker session only. Stop publishing before changing them.
         </p>
         <div className="mt-4 space-y-3 text-sm" style={{ color: 'var(--us-text)' }}>
           {[
-            ['Echo cancellation', 'Off by default to avoid music distortion'],
-            ['Noise suppression', 'Off by default for natural source audio'],
-            ['Auto gain control', 'Off by default to preserve dynamics'],
-          ].map(([label, hint]) => (
+            ['echoCancellation', 'Echo cancellation', 'Off by default to avoid music distortion'],
+            ['noiseSuppression', 'Noise suppression', 'Off by default for natural source audio'],
+            ['autoGainControl', 'Auto gain control', 'Off by default to preserve dynamics'],
+          ].map(([key, label, hint]) => (
             <label key={label} className="flex items-start gap-3 rounded-2xl bg-white/70 px-3 py-3">
-              <input className="mt-1" disabled type="checkbox" />
+              <input
+                checked={audioQuality[key as keyof AudioQualityControls]}
+                className="mt-1"
+                disabled={publishState === 'publishing' || publishState === 'connecting'}
+                onChange={(event) => updateAudioQuality(key as keyof AudioQualityControls, event.target.checked)}
+                type="checkbox"
+              />
               <span>
                 <span className="block font-medium">{label}</span>
                 <span className="block text-xs" style={{ color: 'var(--us-muted)' }}>

@@ -80,6 +80,27 @@ export function ChannelForm({ action, channel, eventSlug, submitLabel }: Channel
         ))}
       </div>
 
+      <div className="rounded-2xl border px-4 py-4" style={{ borderColor: 'var(--us-border)' }}>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+          Audio quality defaults
+        </p>
+        <p className="mt-2 text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
+          These defaults load on the speaker page. Keep them off for music and natural source audio.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {[
+            ['audioQuality.echoCancellation', 'Echo cancellation', channel?.audioQuality?.echoCancellation ?? false],
+            ['audioQuality.noiseSuppression', 'Noise suppression', channel?.audioQuality?.noiseSuppression ?? false],
+            ['audioQuality.autoGainControl', 'Auto gain control', channel?.audioQuality?.autoGainControl ?? false],
+          ].map(([name, label, checked]) => (
+            <label key={String(name)} className="flex items-start gap-3 rounded-2xl bg-white/70 px-4 py-3 text-sm" style={{ color: 'var(--us-text)' }}>
+              <input className="mt-1" defaultChecked={Boolean(checked)} name={String(name)} type="checkbox" />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       <button type="submit" className="us-button-primary px-5 py-3 text-sm font-medium">
         {submitLabel}
       </button>

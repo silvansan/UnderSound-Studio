@@ -1,9 +1,22 @@
+import type { Metadata } from 'next'
+
 import { Layout } from '@/components/Layout'
 import { ListenerConnectPanel } from '@/components/ListenerConnectPanel'
 import { getPublicChannelContext, isListenerPubliclyAvailable } from '@/lib/public-channel'
 
 type PageProps = {
   params: Promise<{ eventSlug: string; channelSlug: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { eventSlug, channelSlug } = await params
+  const context = await getPublicChannelContext(eventSlug, channelSlug)
+  const eventTitle = context?.event.title ?? eventSlug
+  const channelName = context?.channel.name ?? channelSlug
+
+  return {
+    title: `Listen | ${eventTitle} / ${channelName}`,
+  }
 }
 
 export default async function ListenPage({ params }: PageProps) {
@@ -15,28 +28,29 @@ export default async function ListenPage({ params }: PageProps) {
   const languageLabel = context?.channel.languageLabel ?? context?.channel.languageCode ?? context?.event.defaultLanguage
 
   return (
-    <Layout requireAuth={false} title="Listen">
+    <Layout hideHeader requireAuth={false} title="Listen">
       <section className="mx-auto max-w-2xl">
         <div className="us-panel us-hero-glow relative overflow-hidden px-6 py-8 text-center md:px-8">
           <div className="relative z-10">
             <span className={`us-chip ${listenerAvailable ? 'us-chip-blue' : 'us-chip-warning'}`}>
               {listenerAvailable ? 'Public listener route' : 'Listener route unavailable'}
             </span>
-            <p className="mt-5 text-sm" style={{ color: 'var(--us-muted)' }}>
-              {eventTitle} / {channelName}
-            </p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
+            <div className="mt-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--us-blue-dark)' }}>
+                {eventTitle}
+              </p>
+              <h2 className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl" style={{ color: 'var(--us-green-dark)' }}>
+                {channelName}
+              </h2>
+            </div>
+            <h3 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
               Connect to the live channel
-            </h2>
+            </h3>
             {languageLabel ? (
               <p className="mt-2 text-sm font-medium" style={{ color: 'var(--us-blue-dark)' }}>
                 Language: {languageLabel}
               </p>
             ) : null}
-            <p className="mt-3 text-sm leading-7 md:text-base" style={{ color: 'var(--us-muted)' }}>
-              Listener pages stay mobile-first and public-safe. WebRTC is the primary path, with fallback audio shown
-              only when the channel has one configured.
-            </p>
             {listenerAvailable ? (
               <ListenerConnectPanel
                 channelName={channelName}

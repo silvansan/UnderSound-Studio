@@ -2,10 +2,11 @@
 
 import configPromise from '@payload-config'
 import { revalidatePath } from 'next/cache'
-import { getPayload } from 'payload'
+import { getPayload, type Payload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
-import { isSuperAdminUser } from '@/lib/permissions'
+import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+import type { User } from '@/payload-types'
 
 function stringValue(formData: FormData, key: string): string | undefined {
   const value = formData.get(key)
@@ -35,6 +36,65 @@ function permissionsFromForm(formData: FormData) {
     canManageSpeakerPassword: booleanValue(formData, 'canManageSpeakerPassword'),
     canViewQR: booleanValue(formData, 'canViewQR'),
   }
+}
+
+function relationshipID(value: number | string | { id?: number | string } | null | undefined) {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
+  }
+
+  return value?.id
+}
+
+async function canManageAssignment(payload: Payload, user: User, eventID: number | string) {
+  if (isSuperAdminUser(user)) {
+    return true
+  }
+
+  if (!isAdminUser(user)) {
+    return false
+  }
+
+  const event = await payload.findByID({
+    id: eventID,
+    collection: 'events',
+    overrideAccess: true,
+    user,
+  })
+
+  if (relationshipID(event.createdBy) === user.id) {
+    return true
+  }
+
+  const assignments = await payload.find({
+    collection: 'event-assignments',
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    user,
+    where: {
+      and: [
+        {
+          event: {
+            equals: eventID,
+          },
+        },
+        {
+          user: {
+            equals: user.id,
+          },
+        },
+        {
+          roleForEvent: {
+            equals: 'admin',
+          },
+        },
+      ],
+    },
+  })
+
+  return assignments.docs.length > 0
 }
 
 export async function upsertEventAssignmentAction(formData: FormData) {
@@ -123,10 +183,22 @@ export async function deleteEventAssignmentAction(formData: FormData) {
     throw new Error('Assignment and event are required.')
   }
 
+  const assignment = await payload.findByID({
+    id: assignmentID,
+    collection: 'event-assignments',
+    overrideAccess: true,
+    user,
+  })
+  const eventID = relationshipID(assignment.event)
+
+  if (!eventID || !(await canManageAssignment(payload, user, eventID))) {
+    throw new Error('You do not have permission to remove this event assignment.')
+  }
+
   await payload.delete({
     id: assignmentID,
     collection: 'event-assignments',
-    overrideAccess: false,
+    overrideAccess: true,
     user,
   })
 

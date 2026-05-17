@@ -27,6 +27,14 @@ function booleanValue(formData: FormData, key: string): boolean {
   return formData.get(key) === 'on'
 }
 
+function audioQualityValue(formData: FormData) {
+  return {
+    autoGainControl: booleanValue(formData, 'audioQuality.autoGainControl'),
+    echoCancellation: booleanValue(formData, 'audioQuality.echoCancellation'),
+    noiseSuppression: booleanValue(formData, 'audioQuality.noiseSuppression'),
+  }
+}
+
 function tokenModeValue(formData: FormData): 'password' | 'private' | 'public' {
   const value = stringValue(formData, 'listenerTokenMode')
 
@@ -133,6 +141,7 @@ export async function createChannelAction(formData: FormData) {
   const channel = await payload.create({
     collection: 'channels',
     data: {
+      audioQuality: audioQualityValue(formData),
       description: stringValue(formData, 'description'),
       enabled: booleanValue(formData, 'enabled'),
       event: eventID,
@@ -187,6 +196,7 @@ export async function updateChannelAction(formData: FormData) {
     id,
     collection: 'channels',
     data: {
+      audioQuality: audioQualityValue(formData),
       description: stringValue(formData, 'description'),
       enabled: booleanValue(formData, 'enabled'),
       hlsEnabled: booleanValue(formData, 'hlsEnabled'),
@@ -211,6 +221,59 @@ export async function updateChannelAction(formData: FormData) {
   revalidatePath(`/events/${eventSlug}/channels`)
   revalidatePath(`/events/${eventSlug}/channels/${originalSlug}`)
   redirect(`/events/${eventSlug}/channels/${channel.slug}`)
+}
+
+export async function updateChannelSummaryAction(formData: FormData) {
+  const eventSlug = stringValue(formData, 'eventSlug')
+  const channelSlug = stringValue(formData, 'channelSlug')
+  const id = stringValue(formData, 'id')
+  const name = stringValue(formData, 'name')
+  const description = formData.get('description')
+
+  if (!eventSlug || !channelSlug || !id) {
+    throw new Error('Event slug, channel slug, and channel ID are required.')
+  }
+
+  const user = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  const existingChannel = await payload.findByID({
+    collection: 'channels',
+    id,
+    overrideAccess: true,
+    user,
+  })
+  const eventID = typeof existingChannel.event === 'object' ? existingChannel.event.id : existingChannel.event
+
+  if (!(await canManageChannels(payload, user, eventID))) {
+    throw new Error('You do not have permission to update this channel.')
+  }
+
+  const data: { description?: string | null; name?: string } = {}
+
+  if (name) {
+    data.name = name
+  }
+
+  if (typeof description === 'string') {
+    data.description = description.trim() || null
+  }
+
+  if (!data.name && !('description' in data)) {
+    throw new Error('Nothing changed.')
+  }
+
+  await payload.update({
+    id,
+    collection: 'channels',
+    data,
+    overrideAccess: true,
+    user,
+  })
+
+  revalidatePath('/dashboard')
+  revalidatePath('/channels')
+  revalidatePath(`/events/${eventSlug}`)
+  revalidatePath(`/events/${eventSlug}/channels/${channelSlug}`)
 }
 
 export async function deleteChannelAction(formData: FormData) {

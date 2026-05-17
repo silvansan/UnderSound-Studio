@@ -2,10 +2,12 @@ import Link from 'next/link'
 
 import { IconActionLink } from '@/components/ActionIcons'
 import { Layout } from '@/components/Layout'
+import { QRPopup } from '@/components/QRPopup'
 import { requireAppUser } from '@/lib/app-auth'
 import { getDashboardSummary } from '@/lib/dashboard-data'
 import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+import { generateQrDataUrl } from '@/lib/qrcode'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +15,24 @@ export default async function DashboardPage() {
   const [summary, user, publicBaseUrl] = await Promise.all([getDashboardSummary(), requireAppUser(), getRequestBaseUrl()])
   const canCreateEvents = isAdminUser(user)
   const showPayloadAdmin = isSuperAdminUser(user)
+  const recentChannels = await Promise.all(
+    summary.recentChannels.map(async (channel) => {
+      const listenerUrl = getListenerUrl(channel.eventSlug, channel.slug, publicBaseUrl)
+      const speakerUrl = getSpeakerUrl(channel.eventSlug, channel.slug, publicBaseUrl)
+      const [listenerQrDataUrl, speakerQrDataUrl] = await Promise.all([
+        generateQrDataUrl(listenerUrl),
+        generateQrDataUrl(speakerUrl),
+      ])
+
+      return {
+        ...channel,
+        listenerQrDataUrl,
+        listenerUrl,
+        speakerQrDataUrl,
+        speakerUrl,
+      }
+    }),
+  )
 
   return (
     <Layout title="Dashboard">
@@ -41,12 +61,8 @@ export default async function DashboardPage() {
         <article className="us-panel px-6 py-6">
           <span className="us-chip us-chip-muted">Admin workspace</span>
           <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-            Event operations overview
+            Quick actions
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-            This dashboard now reads from Payload records while keeping the branded admin surface lightweight. Payload
-            admin remains the full back office for create/edit operations.
-          </p>
           <div className="mt-6 flex flex-wrap gap-3">
             {showPayloadAdmin ? (
               <Link href="/admin" className="us-button-primary px-5 py-3 text-sm font-medium">
@@ -68,7 +84,7 @@ export default async function DashboardPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
             Recently edited channels
           </p>
-          {summary.recentChannels.length > 0 ? (
+          {recentChannels.length > 0 ? (
             <div className="mt-4 overflow-x-auto">
               <div className="grid min-w-[720px] grid-cols-[1fr_1fr_1.2fr_1.2fr_110px] gap-4 px-2 pb-3 text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--us-muted)' }}>
                 <span>Event</span>
@@ -78,7 +94,7 @@ export default async function DashboardPage() {
                 <span>Enabled?</span>
               </div>
               <ul className="min-w-[720px] space-y-2 text-sm leading-6" style={{ color: 'var(--us-text)' }}>
-              {summary.recentChannels.map((channel) => (
+              {recentChannels.map((channel) => (
                 <li key={`${channel.eventSlug}-${channel.slug}`} className="grid grid-cols-[1fr_1fr_1.2fr_1.2fr_110px] items-center gap-4 rounded-2xl bg-white/70 px-4 py-3">
                   <Link href={`/events/${channel.eventSlug}`} className="font-medium">
                     {channel.eventTitle}
@@ -87,18 +103,14 @@ export default async function DashboardPage() {
                     {channel.name}
                   </Link>
                   <div className="flex gap-2">
-                    <IconActionLink href={`/events/${channel.eventSlug}/channels/${channel.slug}`} icon="qr">
-                      Open speaker QR code
-                    </IconActionLink>
-                    <IconActionLink href={getSpeakerUrl(channel.eventSlug, channel.slug, publicBaseUrl)} icon="open" target="_blank">
+                    <QRPopup fileName={`${channel.eventSlug}-${channel.slug}-speaker.png`} label={`${channel.name} speaker`} qrDataUrl={channel.speakerQrDataUrl} triggerLabel="Show speaker QR" url={channel.speakerUrl} />
+                    <IconActionLink href={channel.speakerUrl} icon="open" target="_blank">
                       Open speaker page
                     </IconActionLink>
                   </div>
                   <div className="flex gap-2">
-                    <IconActionLink href={`/events/${channel.eventSlug}/channels/${channel.slug}`} icon="qr">
-                      Open listener QR code
-                    </IconActionLink>
-                    <IconActionLink href={getListenerUrl(channel.eventSlug, channel.slug, publicBaseUrl)} icon="open" target="_blank">
+                    <QRPopup fileName={`${channel.eventSlug}-${channel.slug}-listener.png`} label={`${channel.name} listener`} qrDataUrl={channel.listenerQrDataUrl} triggerLabel="Show listener QR" url={channel.listenerUrl} />
+                    <IconActionLink href={channel.listenerUrl} icon="open" target="_blank">
                       Open listener page
                     </IconActionLink>
                   </div>
@@ -119,7 +131,7 @@ export default async function DashboardPage() {
 
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {summary.recentEvents.map((event) => (
-          <article key={event.slug} className="us-panel px-5 py-5">
+          <Link key={event.slug} href={`/events/${event.slug}`} className="us-panel block px-5 py-5 transition hover:-translate-y-0.5 hover:shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-semibold" style={{ color: 'var(--us-green-dark)' }}>
                 {event.title}
@@ -129,10 +141,10 @@ export default async function DashboardPage() {
             <p className="mt-3 text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
               {event.channelCount} {event.channelCount === 1 ? 'channel' : 'channels'} configured
             </p>
-            <Link href={`/events/${event.slug}`} className="us-button-secondary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
+            <span className="us-button-secondary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
               Open event
-            </Link>
-          </article>
+            </span>
+          </Link>
         ))}
       </section>
     </Layout>

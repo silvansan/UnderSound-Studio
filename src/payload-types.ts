@@ -277,6 +277,11 @@ export interface Channel {
   webrtcEnabled?: boolean | null;
   hlsEnabled?: boolean | null;
   icecastFallbackUrl?: string | null;
+  audioQuality?: {
+    echoCancellation?: boolean | null;
+    noiseSuppression?: boolean | null;
+    autoGainControl?: boolean | null;
+  };
   listenerPageEnabled?: boolean | null;
   speakerPageEnabled?: boolean | null;
   listenerTokenMode?: ('public' | 'password' | 'private') | null;
@@ -542,6 +547,13 @@ export interface ChannelsSelect<T extends boolean = true> {
   webrtcEnabled?: T;
   hlsEnabled?: T;
   icecastFallbackUrl?: T;
+  audioQuality?:
+    | T
+    | {
+        echoCancellation?: T;
+        noiseSuppression?: T;
+        autoGainControl?: T;
+      };
   listenerPageEnabled?: T;
   speakerPageEnabled?: T;
   listenerTokenMode?: T;

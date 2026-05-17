@@ -3,9 +3,11 @@
 import configPromise from '@payload-config'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getPayload } from 'payload'
+import { getPayload, type Payload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
+import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+import type { Event, User } from '@/payload-types'
 
 function slugify(value: string): string {
   return value
@@ -35,6 +37,58 @@ function dateValue(formData: FormData, key: string): string | undefined {
   const value = stringValue(formData, key)
 
   return value ? new Date(value).toISOString() : undefined
+}
+
+function relationshipID(value: number | string | { id?: number | string } | null | undefined) {
+  if (typeof value === 'number' || typeof value === 'string') {
+    return value
+  }
+
+  return value?.id
+}
+
+async function canDeleteEvent(payload: Payload, user: User, event: Event) {
+  if (isSuperAdminUser(user)) {
+    return true
+  }
+
+  if (!isAdminUser(user)) {
+    return false
+  }
+
+  if (relationshipID(event.createdBy) === user.id) {
+    return true
+  }
+
+  const assignments = await payload.find({
+    collection: 'event-assignments',
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    user,
+    where: {
+      and: [
+        {
+          event: {
+            equals: event.id,
+          },
+        },
+        {
+          user: {
+            equals: user.id,
+          },
+        },
+        {
+          roleForEvent: {
+            equals: 'admin',
+          },
+        },
+      ],
+    },
+  })
+
+  return assignments.docs.length > 0
 }
 
 export async function createEventAction(formData: FormData) {
@@ -114,10 +168,68 @@ export async function deleteEventAction(formData: FormData) {
     throw new Error('Event ID is required.')
   }
 
+  const event = await payload.findByID({
+    id,
+    collection: 'events',
+    overrideAccess: true,
+    user,
+  })
+
+  if (!(await canDeleteEvent(payload, user, event))) {
+    throw new Error('You do not have permission to delete this event.')
+  }
+
+  const [channels, assignments] = await Promise.all([
+    payload.find({
+      collection: 'channels',
+      depth: 0,
+      limit: 1000,
+      overrideAccess: true,
+      pagination: false,
+      user,
+      where: {
+        event: {
+          equals: id,
+        },
+      },
+    }),
+    payload.find({
+      collection: 'event-assignments',
+      depth: 0,
+      limit: 1000,
+      overrideAccess: true,
+      pagination: false,
+      user,
+      where: {
+        event: {
+          equals: id,
+        },
+      },
+    }),
+  ])
+
+  for (const channel of channels.docs) {
+    await payload.delete({
+      id: channel.id,
+      collection: 'channels',
+      overrideAccess: true,
+      user,
+    })
+  }
+
+  for (const assignment of assignments.docs) {
+    await payload.delete({
+      id: assignment.id,
+      collection: 'event-assignments',
+      overrideAccess: true,
+      user,
+    })
+  }
+
   await payload.delete({
     id,
     collection: 'events',
-    overrideAccess: false,
+    overrideAccess: true,
     user,
   })
 

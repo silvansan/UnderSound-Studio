@@ -1,9 +1,10 @@
 import '@/styles/globals.css'
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 import { HashRouteRedirect } from '@/components/HashRouteRedirect'
 
-export const metadata = {
+export const metadata: Metadata = {
   description: 'UnderSound — live translation and audio for events',
   icons: {
     apple: '/apple-icon.png',
@@ -24,7 +25,10 @@ export const metadata = {
     ],
     shortcut: '/favicon.ico',
   },
-  title: 'UnderSound',
+  title: {
+    default: 'UnderSound Studio',
+    template: '%s | UnderSound Studio',
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

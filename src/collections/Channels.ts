@@ -164,6 +164,27 @@ export const Channels: CollectionConfig = {
               name: 'icecastFallbackUrl',
               type: 'text',
             },
+            {
+              name: 'audioQuality',
+              type: 'group',
+              fields: [
+                {
+                  name: 'echoCancellation',
+                  type: 'checkbox',
+                  defaultValue: false,
+                },
+                {
+                  name: 'noiseSuppression',
+                  type: 'checkbox',
+                  defaultValue: false,
+                },
+                {
+                  name: 'autoGainControl',
+                  type: 'checkbox',
+                  defaultValue: false,
+                },
+              ],
+            },
           ],
         },
         {

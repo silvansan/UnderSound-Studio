@@ -217,6 +217,9 @@ export default async function UsersPage() {
                   {String(user.id) !== String(currentUser.id) ? (
                     <form action={deleteUserAction} className="mt-3">
                       <input name="id" type="hidden" value={user.id} />
+                      <p className="mb-3 text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
+                        Deleting a user also removes their event assignments.
+                      </p>
                       <button type="submit" className="rounded-2xl border px-4 py-2.5 text-sm font-medium" style={{ borderColor: 'var(--us-danger)', color: 'var(--us-danger)' }}>
                         Delete user
                       </button>

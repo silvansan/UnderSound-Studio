@@ -141,10 +141,44 @@ export async function deleteUserAction(formData: FormData) {
   }
 
   const payload = await getPayload({ config: configPromise })
+  const targetUser = await payload.findByID({
+    id,
+    collection: 'users',
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  if (!isSuperAdminUser(currentUser) && targetUser.role !== 'moderator') {
+    throw new Error('Admins can only delete moderator accounts.')
+  }
+
+  const assignments = await payload.find({
+    collection: 'event-assignments',
+    depth: 0,
+    limit: 1000,
+    overrideAccess: true,
+    pagination: false,
+    user: currentUser,
+    where: {
+      user: {
+        equals: id,
+      },
+    },
+  })
+
+  for (const assignment of assignments.docs) {
+    await payload.delete({
+      id: assignment.id,
+      collection: 'event-assignments',
+      overrideAccess: true,
+      user: currentUser,
+    })
+  }
+
   await payload.delete({
     id,
     collection: 'users',
-    overrideAccess: false,
+    overrideAccess: true,
     user: currentUser,
   })
 

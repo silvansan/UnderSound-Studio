@@ -1,17 +1,18 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
-import { UserCircleIcon } from './ActionIcons'
+import { AndroidIcon, GitHubIcon, LicenseIcon, UserCircleIcon } from './ActionIcons'
 import { Logo } from './Logo'
 import { getCurrentAppUser, requireAppUser } from '@/lib/app-auth'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 
 type LayoutProps = {
   children: ReactNode
+  hideHeader?: boolean
   requireAuth?: boolean
   title?: string
 }
 
-export async function Layout({ children, requireAuth = true, title }: LayoutProps) {
+export async function Layout({ children, hideHeader = false, requireAuth = true, title }: LayoutProps) {
   const user = requireAuth ? await requireAppUser() : await getCurrentAppUser()
   const showAppMenu = Boolean(user)
   const showPayloadAdmin = user ? isSuperAdminUser(user) : false
@@ -85,24 +86,26 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
         ) : null}
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <header className="us-panel px-5 py-4 md:px-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-                  UnderSound v2
-                </p>
-                {title ? (
-                  <h1 className="mt-1 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-                    {title}
-                  </h1>
-                ) : (
-                  <h1 className="mt-1 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-                    Event audio control
-                  </h1>
-                )}
+          {hideHeader ? null : (
+            <header className="us-panel px-5 py-4 md:px-6">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+                    UnderSound Studio
+                  </p>
+                  {title ? (
+                    <h1 className="mt-1 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
+                      {title}
+                    </h1>
+                  ) : (
+                    <h1 className="mt-1 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
+                      Event audio control
+                    </h1>
+                  )}
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
+          )}
 
           <main className="min-w-0 flex-1">{children}</main>
 
@@ -111,30 +114,33 @@ export async function Layout({ children, requireAuth = true, title }: LayoutProp
               <p>Copyright © {currentYear} UnderSound Studio</p>
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 <a
-                  className="font-medium"
+                  className="inline-flex items-center gap-1.5 font-medium"
                   href="https://github.com/silvansan/UnderSound-Studio"
                   rel="noreferrer"
                   style={{ color: 'var(--us-blue-dark)' }}
                   target="_blank"
                 >
+                  <GitHubIcon />
                   Source code
                 </a>
                 <a
-                  className="font-medium"
+                  className="inline-flex items-center gap-1.5 font-medium"
                   href="https://github.com/silvansan/UnderSound-Studio/blob/main/LICENSE"
                   rel="noreferrer"
                   style={{ color: 'var(--us-blue-dark)' }}
                   target="_blank"
                 >
+                  <LicenseIcon />
                   License: AGPLv3
                 </a>
                 <a
-                  className="font-medium"
+                  className="inline-flex items-center gap-1.5 font-medium"
                   href="https://github.com/silvansan/UnderSound-Mobile/releases"
                   rel="noreferrer"
                   style={{ color: 'var(--us-blue-dark)' }}
                   target="_blank"
                 >
+                  <AndroidIcon />
                   Download Android app
                 </a>
               </div>
