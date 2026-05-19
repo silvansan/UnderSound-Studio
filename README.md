@@ -1,14 +1,21 @@
-<p align=center><img width="250" height="250" alt="ablaut logo" src="./public/ablaut-logo.png" /></p>
+<p align=center><img width="250" height="250" alt="ablaut logo" src="./public/ablaut-icon.png" /></p>
 
   
   
   # ablaut
 
-Self-hosted live translation and event audio management.
+Self-hosted live translation and event audio management. 
 
-ablaut `[ˈap.laʊt]` uses the `[aʊ]` mark for a Payload CMS 3 + Next.js app that creates events, channels, listener links, speaker links, QR codes, and LiveKit audio rooms. It is built to deploy as one Docker Compose stack with PostgreSQL and LiveKit included.
+[ablaut-App](https://github.com/silvansan/ablaut-App) as a receiver on Android phones.
 
-The name comes from **ablaut**, a change in vowel or sound form. That fits the project's goal: carrying the same message across different languages, voices, and listening contexts.
+iOS app to be released soon.
+
+## ablaut `[ˈap.laʊt]` uses the `[aʊ]` mark for the logo - in linguistics, ablaut is a systematic variation of vowels within the same root or affix to indicate changes in grammatical function or meaning, particularly in Indo-European languages.
+
+This project's goal to provide sub-second live translation or an assisted-listening solution for events, HOW, on-campus or out-of-campus non-profit organizations. The "ablaut" is connected in meaning to the core of the project on the linguistic side of things, as this project sprung from a need to cover the misunderstanding based of the variations in the Indo-European languages, but, of course, not only of the vowels. 
+
+The back-end and the front-end: a [Payload CMS 3](https://github.com/payloadcms/payload) + Next.js app that creates events, channels, listener links, speaker links, QR codes. All this on top of [LiveKit](https://github.com/livekit/livekit) audio rooms. It is built to deploy as one Docker Compose stack with PostgreSQL and LiveKit included.
+
 
 Built with Cursor-assisted development.
 
@@ -16,16 +23,16 @@ Built with Cursor-assisted development.
 
 ablaut is intended to provide accessible live translation and event-audio tools for charity organizations, churches, community groups, and low-income associations.
 
+
 The project is not intended to be commercially exploited in ways that take advantage of those communities. Commercial use is discouraged unless it directly supports this mission, contributes improvements back, or is arranged with the project maintainer.
 
 ## What It Does
 
-- Create events and language/audio channels.
+- Create organisations, events and language/audio channels.
 - Generate listener and speaker links with QR codes.
 - Let speakers publish microphone audio through LiveKit.
 - Let listeners connect from browser or mobile app.
 - Manage users with `super_admin`, `admin`, and `moderator` roles.
-- Keep Payload admin available for super-admin back-office work.
 - Run locally, on LAN, or in cloud from the same Compose stack.
 
 ## Stack
@@ -75,9 +82,7 @@ QR codes use the host you opened the app with, so LAN URLs work on phones and cl
 
 Android APK downloads are published through the ablaut-App GitHub Releases page:
 
-```text
-https://github.com/silvansan/ablaut-App/releases
-```
+[CHECK THE LATEST RELEASE](https://github.com/silvansan/ablaut-App/releases)
 
 ## Included Services
 
@@ -128,7 +133,7 @@ See `LICENSE`.
 
 
 
-#Screenshots
+# Screenshots
 
 <img width="100%" alt="image" src="https://github.com/user-attachments/assets/424cb155-8e35-42d9-92f8-a8f575b36dc4" />
 <img width="100%" alt="image" src="https://github.com/user-attachments/assets/802f2f89-ddc5-41b6-9e25-bfb9180d6637" />
