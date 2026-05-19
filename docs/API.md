@@ -1,4 +1,4 @@
-# UnderSound API Contract
+# ablaut API Contract
 
 This document is the compatibility contract for public listener/speaker links, QR codes, and Android app integration.
 
@@ -42,6 +42,14 @@ Response:
 
 ```json
 {
+  "access": {
+    "listenerTokenMode": "public",
+    "listenerPasswordRequired": false,
+    "listenerPasswordConfigured": true,
+    "listenerPasswordMissing": false,
+    "listenerUnavailable": false,
+    "verifyPasswordEndpoint": "/api/listener/verify-password"
+  },
   "event": {
     "title": "Event title",
     "slug": "event-slug",
@@ -67,7 +75,7 @@ Response:
     "icecastFallbackUrl": null
   },
   "livekit": {
-    "roomName": "undersound_event-slug_en",
+    "roomName": "ablaut_event-slug_en",
     "tokenEndpoint": "/api/livekit/listener-token",
     "url": "wss://livekit.example.com"
   }
@@ -138,8 +146,15 @@ Body:
 {
   "eventSlug": "event-slug",
   "channelSlug": "en",
-  "identity": "optional-client-identity"
+  "identity": "optional-client-identity",
+  "listenerSessionToken": "optional-after-verify"
 }
+```
+
+Header alternative for native apps:
+
+```http
+X-Ablaut-Listener-Session: <token-from-verify-password>
 ```
 
 Rules:
@@ -148,8 +163,9 @@ Rules:
 - Public listener pages must be enabled.
 - Channel must be enabled.
 - Channel listener page must be enabled.
-- Event listener password must not be enabled.
-- Channel `listenerTokenMode` must be `public`.
+- **Public** channels: no session required.
+- **Password** channels: valid `listenerSessionToken` (from `POST /api/listener/verify-password`) or matching session cookie.
+- **Private** channels: token denied until a future release.
 - Token can subscribe only.
 - Token cannot publish.
 
@@ -159,7 +175,7 @@ Success response:
 {
   "token": "jwt",
   "url": "wss://livekit.example.com",
-  "roomName": "undersound_event-slug_en",
+  "roomName": "ablaut_event-slug_en",
   "expiresIn": 3600
 }
 ```
@@ -201,7 +217,7 @@ Success response:
 {
   "token": "jwt",
   "url": "wss://livekit.example.com",
-  "roomName": "undersound_event-slug_en",
+  "roomName": "ablaut_event-slug_en",
   "expiresIn": 3600
 }
 ```
@@ -212,6 +228,42 @@ Errors:
 - `403` when speaker token is not available.
 - `404` when channel is not found.
 - `503` when LiveKit is not configured.
+
+## Listener Password Endpoint
+
+`POST /api/listener/verify-password`
+
+Body:
+
+```json
+{
+  "eventSlug": "event-slug",
+  "channelSlug": "en",
+  "password": "listener-password"
+}
+```
+
+Success:
+
+```json
+{
+  "ok": true,
+  "required": true,
+  "listenerSessionToken": "signed-session-token",
+  "expiresIn": 43200
+}
+```
+
+- Password is stored at **event** level (shared by all password-mode channels on that event).
+- Web clients also receive an HTTP-only cookie.
+- Mobile clients must store `listenerSessionToken` and send it to `POST /api/livekit/listener-token`.
+- `expiresIn` is seconds until the session should be refreshed.
+
+Errors:
+
+- `400` when password is required but missing.
+- `401` when password is wrong.
+- `404` when listener channel is not available.
 
 ## Speaker Password Endpoint
 
@@ -262,7 +314,7 @@ Android compatibility rule:
 Default generated room name:
 
 ```text
-undersound_{eventSlug}_{channelSlug}
+ablaut_{eventSlug}_{channelSlug}
 ```
 
 If an imported channel has `roomName` or `livekitRoomName`, preserve it to avoid breaking existing clients.

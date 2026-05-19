@@ -1,13 +1,14 @@
 'use client'
 
 import { Room, RoomEvent, Track, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from 'livekit-client'
-import { useEffect, useRef, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 
 type ListenerConnectPanelProps = {
   channelName: string
   channelSlug: string
   eventSlug: string
   fallbackUrl?: string | null
+  hasListenerSession?: boolean
   listenerTokenMode?: 'public' | 'password' | 'private' | null
   listenerPasswordEnabled?: boolean | null
   webrtcEnabled?: boolean | null
@@ -20,11 +21,19 @@ type ListenerTokenResponse = {
 
 type ConnectionState = 'idle' | 'connecting' | 'connected' | 'unavailable' | 'error'
 
+function passwordRequired(
+  listenerPasswordEnabled?: boolean | null,
+  listenerTokenMode?: 'public' | 'password' | 'private' | null,
+): boolean {
+  return listenerPasswordEnabled === true || listenerTokenMode === 'password'
+}
+
 export function ListenerConnectPanel({
   channelName,
   channelSlug,
   eventSlug,
   fallbackUrl,
+  hasListenerSession: initialHasListenerSession = false,
   listenerPasswordEnabled,
   listenerTokenMode,
   webrtcEnabled,
@@ -33,12 +42,17 @@ export function ListenerConnectPanel({
   const roomRef = useRef<Room | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [state, setState] = useState<ConnectionState>('idle')
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const needsPassword = passwordRequired(listenerPasswordEnabled, listenerTokenMode)
+  const [hasAccess, setHasAccess] = useState(!needsPassword || initialHasListenerSession)
 
   useEffect(() => {
     const audioContainer = audioContainerRef.current
 
     window.localStorage.setItem(
-      'undersound:last-listener-channel',
+      'ablaut:last-listener-channel',
       JSON.stringify({ channelSlug, eventSlug, savedAt: new Date().toISOString() }),
     )
 
@@ -60,7 +74,7 @@ export function ListenerConnectPanel({
     element.className = 'mt-4 w-full'
     audioContainerRef.current.append(element)
     setState('connected')
-      setMessage(`Connected to ${channelName}. Audio will play when a speaker is live.`)
+    setMessage(`Connected to ${channelName}. Audio will play when a speaker is live.`)
   }
 
   function attachExistingAudio(room: Room) {
@@ -73,6 +87,34 @@ export function ListenerConnectPanel({
     })
   }
 
+  async function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setPasswordError(null)
+    setPasswordLoading(true)
+
+    const response = await fetch('/api/listener/verify-password', {
+      body: JSON.stringify({
+        channelSlug,
+        eventSlug,
+        password,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    })
+
+    setPasswordLoading(false)
+
+    if (!response.ok) {
+      setPasswordError('Incorrect listener password.')
+      return
+    }
+
+    setHasAccess(true)
+    setMessage('Password accepted. You can connect to the stream.')
+  }
+
   async function connect() {
     if (webrtcEnabled === false) {
       setState('unavailable')
@@ -80,9 +122,15 @@ export function ListenerConnectPanel({
       return
     }
 
-    if (listenerPasswordEnabled || listenerTokenMode === 'password' || listenerTokenMode === 'private') {
+    if (listenerTokenMode === 'private') {
       setState('unavailable')
-      setMessage('This listener channel is not public yet. Password/private listener flow will be added later.')
+      setMessage('This listener channel is private. Contact the event organizer for access.')
+      return
+    }
+
+    if (needsPassword && !hasAccess) {
+      setState('unavailable')
+      setMessage('Enter the listener password before connecting.')
       return
     }
 
@@ -99,7 +147,11 @@ export function ListenerConnectPanel({
 
     if (!response.ok) {
       setState(response.status === 403 ? 'unavailable' : 'error')
-      setMessage('Unable to connect to this listener channel right now.')
+      setMessage(
+        response.status === 403
+          ? 'Unable to connect. Check that a listener password is configured on the event.'
+          : 'Unable to connect to this listener channel right now.',
+      )
       return
     }
 
@@ -142,6 +194,36 @@ export function ListenerConnectPanel({
 
   const buttonLabel =
     state === 'connecting' ? 'Connecting...' : state === 'connected' ? 'Reconnect WebRTC' : 'Connect with WebRTC'
+
+  if (needsPassword && !hasAccess) {
+    return (
+      <div className="mt-6">
+        <p className="text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
+          This channel requires the event listener password before you can connect.
+        </p>
+        <form className="mt-4 space-y-3" onSubmit={submitPassword}>
+          <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
+            Listener password
+            <input
+              className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
+              onChange={(event) => setPassword(event.target.value)}
+              style={{ borderColor: 'var(--us-border)' }}
+              type="password"
+              value={password}
+            />
+          </label>
+          {passwordError ? (
+            <p className="text-sm" style={{ color: 'var(--us-danger)' }}>
+              {passwordError}
+            </p>
+          ) : null}
+          <button className="us-button-primary w-full px-6 py-3 text-sm font-medium" disabled={passwordLoading} type="submit">
+            {passwordLoading ? 'Checking...' : 'Continue'}
+          </button>
+        </form>
+      </div>
+    )
+  }
 
   return (
     <div className="mt-6">

@@ -1,6 +1,6 @@
 # Android Compatibility
 
-This document protects the public link and API behavior that the Android app and QR codes depend on.
+This document protects the public link and API behavior that the ablaut-App/legacy Android app and QR codes depend on.
 
 ## Stable Listener Links
 
@@ -10,7 +10,7 @@ Primary listener URL:
 /listen/:eventSlug/:channelSlug
 ```
 
-This is the preferred QR code and Android listener link.
+This is the preferred QR code and mobile listener link.
 
 Compatibility redirect:
 
@@ -34,7 +34,7 @@ Compatibility redirect:
 
 ## Public Metadata
 
-Android-safe public endpoints:
+Mobile-safe public endpoints:
 
 - `GET /api/public/listen/:eventSlug/:channelSlug`
 - `GET /api/events/:eventSlug/channels`
@@ -47,6 +47,20 @@ These return only public event/channel fields. They must not return:
 - Payload auth data
 - LiveKit API secrets
 - SMTP secrets
+
+## Listener Passwords (mobile)
+
+After fetching public listener metadata, read the `access` object:
+
+- `listenerPasswordRequired` — show password UI before connecting.
+- `listenerPasswordMissing` — event misconfigured; show error (password mode but no event password).
+- `listenerUnavailable` — `private` mode; not supported on mobile yet.
+
+Flow:
+
+1. `POST /api/listener/verify-password` with `eventSlug`, `channelSlug`, `password`.
+2. Store returned `listenerSessionToken` in app favorites (encrypted).
+3. `POST /api/livekit/listener-token` with `listenerSessionToken` in body or `X-Ablaut-Listener-Session` header.
 
 ## LiveKit Tokens
 
@@ -74,7 +88,7 @@ If old Android clients depend on existing LiveKit room names, keep those values 
 New fallback room names use:
 
 ```text
-undersound_{eventSlug}_{channelSlug}
+ablaut_{eventSlug}_{channelSlug}
 ```
 
 ## Change Rules

@@ -37,7 +37,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [],
     localPatterns: [
       {
-        pathname: '/undersound-logo.png',
+        pathname: '/ablaut-icon.png',
+      },
+      {
+        pathname: '/ablaut-logo.png',
       },
       {
         pathname: '/api/media/file/**',

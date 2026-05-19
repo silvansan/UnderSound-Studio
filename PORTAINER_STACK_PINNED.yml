@@ -1,0 +1,86 @@
+# ablaut - Portainer pinned tag stack
+#
+# Use this variant when you want safer rollback from Portainer.
+# Change only the tag suffix when upgrading:
+#   https://github.com/silvansan/ablaut-Studio.git#ablaut-v0.2.0
+#
+# Rollback means changing the tag back to the previous known-good tag and redeploying.
+# Keep the stack name, database name, credentials, and volumes stable.
+
+name: ablaut-studio
+
+services:
+  app:
+    build:
+      context: https://github.com/silvansan/ablaut-Studio.git#ablaut-v0.2.0
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PAYLOAD_SECRET: CHANGE_ME_LONG_RANDOM_PAYLOAD_SECRET_MIN_32_CHARS
+      DATABASE_URI: postgres://ablaut:CHANGE_ME_DB_PASSWORD@db:5432/ablaut
+      POSTGRES_USER: ablaut
+      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
+      POSTGRES_DB: ablaut
+      PAYLOAD_DB_PUSH: 'true'
+      NEXT_PUBLIC_APP_URL: https://ablaut.example.com
+      PUBLIC_BASE_URL: https://ablaut.example.com
+      LIVEKIT_API_KEY: ablaut
+      LIVEKIT_API_SECRET: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
+      LIVEKIT_URL: wss://livekit.example.com
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: '587'
+      SMTP_USER: CHANGE_ME_SMTP_USER
+      SMTP_PASS: CHANGE_ME_SMTP_PASSWORD
+      SMTP_FROM: noreply@example.com
+      INITIAL_SUPER_ADMIN_EMAIL: admin@example.com
+      INITIAL_SUPER_ADMIN_PASSWORD: CHANGE_ME_FIRST_ADMIN_PASSWORD
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+    volumes:
+      - ablaut_uploads:/app/media
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.9.1
+    command:
+      - --config-body
+      - |
+        port: 7880
+        bind_addresses:
+          - 0.0.0.0
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 50100
+          use_external_ip: true
+        keys:
+          ablaut: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
+    ports:
+      - '7880:7880'
+      - '7881:7881'
+      - '50000-50100:50000-50100/udp'
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ablaut
+      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
+      POSTGRES_DB: ablaut
+    volumes:
+      - ablaut_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  ablaut_db:
+  ablaut_uploads:

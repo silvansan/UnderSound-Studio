@@ -1,10 +1,12 @@
 import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
+import { IconActionLink } from '@/components/ActionIcons'
 import { Layout } from '@/components/Layout'
-import { QRActionCard } from '@/components/QRActionCard'
+import { QRPopup } from '@/components/QRPopup'
 import { SpeakerAccessPanel } from '@/components/SpeakerAccessPanel'
 import { SpeakerListenerMonitor } from '@/components/SpeakerListenerMonitor'
+import { formatEventChannelTitle } from '@/lib/branding'
 import { getListenerUrl, getRequestBaseUrl } from '@/lib/links'
 import { getPublicChannelContext, isSpeakerPubliclyAvailable } from '@/lib/public-channel'
 import { generateQrDataUrl } from '@/lib/qrcode'
@@ -25,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const channelName = context?.channel.name ?? channelSlug
 
   return {
-    title: `Speak | ${eventTitle} / ${channelName}`,
+    title: formatEventChannelTitle(eventTitle, channelName),
   }
 }
 
@@ -73,17 +75,19 @@ export default async function SpeakPage({ params }: PageProps) {
                   channelSlug={channelSlug}
                   eventSlug={eventSlug}
                   fallbackUrl={context.channel.icecastFallbackUrl}
-                  listenerPasswordEnabled={context.event.listenerPasswordEnabled}
-                  listenerTokenMode={context.channel.listenerTokenMode}
                   webrtcEnabled={context.channel.webrtcEnabled}
                 />
-                <div className="grid gap-3">
-                  <QRActionCard
+                <div className="flex flex-wrap items-center gap-2">
+                  <QRPopup
                     fileName={`${eventSlug}-${channelSlug}-listener.png`}
                     label="Listener"
                     qrDataUrl={listenerQrDataUrl}
+                    triggerLabel="Listener QR"
                     url={listenerUrl}
                   />
+                  <IconActionLink href={listenerUrl} icon="open" target="_blank">
+                    Open listener page
+                  </IconActionLink>
                 </div>
               </div>
             ) : null}

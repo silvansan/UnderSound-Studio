@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 
 import { DownloadIcon, OpenLinkIcon, QRCodeIcon } from '@/components/ActionIcons'
+import { ModalPortal } from '@/components/ModalPortal'
 
 type QRPopupProps = {
   fileName?: string
@@ -31,7 +32,10 @@ export function QRPopup({ fileName, label, qrDataUrl, triggerLabel = `Show ${lab
       <button
         aria-label={triggerLabel}
         className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white/80 transition hover:-translate-y-0.5 hover:shadow-md"
-        onClick={() => setOpen(true)}
+        onClick={(event) => {
+          event.stopPropagation()
+          setOpen(true)
+        }}
         style={{ borderColor: 'var(--us-border)', color: 'var(--us-blue-dark)' }}
         title={triggerLabel}
         type="button"
@@ -40,6 +44,7 @@ export function QRPopup({ fileName, label, qrDataUrl, triggerLabel = `Show ${lab
       </button>
 
       {open ? (
+        <ModalPortal>
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/42 px-4 py-6"
           role="dialog"
@@ -105,6 +110,7 @@ export function QRPopup({ fileName, label, qrDataUrl, triggerLabel = `Show ${lab
             </div>
           </div>
         </div>
+        </ModalPortal>
       ) : null}
     </>
   )

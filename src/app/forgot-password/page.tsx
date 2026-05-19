@@ -1,7 +1,11 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { ForgotPasswordForm } from '@/components/ForgotPasswordForm'
 import { Layout } from '@/components/Layout'
+import { pageMetadata } from '@/lib/branding'
+
+export const metadata: Metadata = pageMetadata('Reset password')
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +21,7 @@ export default function ForgotPasswordPage() {
             Send a password reset link
           </h2>
           <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-            Enter your account email. If the account exists, UnderSound will email a secure reset link.
+            Enter your account email. If the account exists, ablaut will email a secure reset link.
           </p>
           <div className="mt-6">
             <ForgotPasswordForm />

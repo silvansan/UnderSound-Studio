@@ -1,6 +1,6 @@
 # Security Checklist
 
-Current security posture for UnderSound v2.
+Current security posture for ablaut.
 
 ## Implemented
 
@@ -62,13 +62,22 @@ Payload owns its auth routes, so production deployments should rate-limit these 
 - `POST /api/users/login`
 - `POST /api/users/forgot-password`
 - `POST /api/users/reset-password`
+- `POST /api/app/reset-password`
+- `POST /api/app/login-failure`
 
 Recommended starting policy:
 
 - `POST /api/users/login`: 5 requests per minute per IP, burst 10.
 - `POST /api/users/forgot-password`: 3 requests per 10 minutes per IP, burst 5.
 - `POST /api/users/reset-password`: 5 requests per 10 minutes per IP, burst 5.
+- `POST /api/app/reset-password`: 5 requests per 10 minutes per IP, burst 5.
 - Return `429 Too Many Requests` with `Retry-After` when exceeded.
+
+## Organizations
+
+- User visibility is scoped by organization membership for non-super-admins.
+- Event assignments require active organization membership unless a super admin overrides in Payload.
+- See `docs/ORGANIZATIONS.md`.
 
 ## Still Recommended
 

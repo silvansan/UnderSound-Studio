@@ -8,8 +8,6 @@ type SpeakerListenerMonitorProps = {
   channelSlug: string
   eventSlug: string
   fallbackUrl?: string | null
-  listenerPasswordEnabled?: boolean | null
-  listenerTokenMode?: 'public' | 'password' | 'private' | null
   webrtcEnabled?: boolean | null
 }
 
@@ -26,8 +24,6 @@ export function SpeakerListenerMonitor({
   channelSlug,
   eventSlug,
   fallbackUrl,
-  listenerPasswordEnabled,
-  listenerTokenMode,
   webrtcEnabled,
 }: SpeakerListenerMonitorProps) {
   const audioContainerRef = useRef<HTMLDivElement>(null)
@@ -73,12 +69,6 @@ export function SpeakerListenerMonitor({
     if (webrtcEnabled === false) {
       setState('unavailable')
       setMessage('WebRTC is disabled for listeners on this channel.')
-      return
-    }
-
-    if (listenerPasswordEnabled || listenerTokenMode === 'password' || listenerTokenMode === 'private') {
-      setState('unavailable')
-      setMessage('This listener channel is password/private, so inline monitoring is not available yet.')
       return
     }
 
@@ -150,7 +140,8 @@ export function SpeakerListenerMonitor({
         Listener monitor
       </p>
       <p className="mt-1 text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
-        Subscribe as a listener from this speaker page to verify what listeners hear.
+        Hear what listeners hear on this channel. Works even when the public listener link is password-protected or private.
+        If the channel uses a speaker password, unlock publish controls first.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {state === 'connected' ? (

@@ -74,7 +74,7 @@ body {
   --hover-color: #126bb6;
 }
 
-.undersound-admin-logo {
+.ablaut-admin-logo {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -83,26 +83,26 @@ body {
   letter-spacing: -0.02em;
 }
 
-.undersound-admin-logo img {
+.ablaut-admin-logo img {
   width: 44px;
   height: 44px;
   border-radius: 14px;
   object-fit: cover;
 }
 
-.undersound-admin-icon img {
+.ablaut-admin-icon img {
   width: 34px;
   height: 34px;
   border-radius: 11px;
   object-fit: cover;
 }
 
-.undersound-admin-dashboard-link {
+.ablaut-admin-dashboard-link {
   margin: 0 12px 14px;
 }
 
-.undersound-admin-dashboard-link a,
-.undersound-admin-intro a {
+.ablaut-admin-dashboard-link a,
+.ablaut-admin-intro a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,7 +116,7 @@ body {
   text-decoration: none;
 }
 
-.undersound-admin-intro {
+.ablaut-admin-intro {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -131,7 +131,7 @@ body {
   padding: 22px;
 }
 
-.undersound-admin-intro p {
+.ablaut-admin-intro p {
   margin: 0 0 8px;
   color: #126bb6;
   font-size: 12px;
@@ -140,13 +140,13 @@ body {
   text-transform: uppercase;
 }
 
-.undersound-admin-intro h2 {
+.ablaut-admin-intro h2 {
   margin: 0;
   color: #163f35;
   font-size: 22px;
 }
 
-.undersound-admin-intro span {
+.ablaut-admin-intro span {
   display: block;
   margin-top: 8px;
   color: #5d7680;
@@ -155,7 +155,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .undersound-admin-intro {
+  .ablaut-admin-intro {
     align-items: flex-start;
     flex-direction: column;
   }

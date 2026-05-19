@@ -1,11 +1,15 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { Layout } from '@/components/Layout'
 import { ResetPasswordForm } from '@/components/ResetPasswordForm'
+import { pageMetadata } from '@/lib/branding'
 
 type PageProps = {
   params: Promise<{ token: string }>
 }
+
+export const metadata: Metadata = pageMetadata('Set new password')
 
 export const dynamic = 'force-dynamic'
 

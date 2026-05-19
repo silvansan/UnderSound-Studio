@@ -10,8 +10,8 @@ export type SmtpConfig = {
 }
 
 const localConsoleEmailAdapter: EmailAdapter<void> = ({ payload }) => ({
-  defaultFromAddress: 'noreply@undersound.local',
-  defaultFromName: 'UnderSound',
+  defaultFromAddress: 'noreply@ablaut.local',
+  defaultFromName: 'ablaut',
   name: 'console',
   sendEmail: async (message) => {
     const recipients = Array.isArray(message.to) ? message.to.join(', ') : String(message.to ?? '')
@@ -74,7 +74,8 @@ function renderEmailShell(args: {
               ${escapeHtml(ctaLabel)}
             </a>
           </div>
-          <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#5d7680;word-break:break-word;">${escapeHtml(ctaUrl)}</p>
+          <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#5d7680;">If the button does not work, copy this link:</p>
+          <p style="margin:4px 0 0;font-size:12px;line-height:1.6;color:#5d7680;word-break:break-word;">${escapeHtml(ctaUrl)}</p>
           ${
             outro
               ? `<p style="margin:20px 0 0;font-size:14px;line-height:1.7;color:#5d7680;">${escapeHtml(outro)}</p>`
@@ -117,7 +118,7 @@ export async function buildEmailAdapter() {
 
   return nodemailerAdapter({
     defaultFromAddress: smtp.from,
-    defaultFromName: 'UnderSound',
+    defaultFromName: 'ablaut',
     skipVerify: true,
     transportOptions: {
       auth:
@@ -136,19 +137,19 @@ export async function buildEmailAdapter() {
 
 export function generateVerificationEmailHTML({ token, user }: AuthEmailArgs) {
   const email = typeof user.email === 'string' ? user.email : 'your account'
-  const url = joinUrl(getBaseUrl(), `/admin/users/verify/${token}`)
+  const url = joinUrl(getBaseUrl(), `/reset-password/${token}`)
 
   return renderEmailShell({
     ctaLabel: 'Verify account',
     ctaUrl: url,
-    eyebrow: 'UnderSound account',
-    intro: `Verify ${email} to finish activating your UnderSound access.`,
+    eyebrow: 'ablaut account',
+    intro: `Verify ${email} to finish activating your ablaut access. This link also lets you set or update your password.`,
     title: 'Confirm your email',
   })
 }
 
 export function generateVerificationEmailSubject() {
-  return 'Verify your UnderSound account'
+  return 'Verify your ablaut account'
 }
 
 export function generateForgotPasswordEmailHTML({ token, user }: Partial<AuthEmailArgs> = {}) {
@@ -159,7 +160,7 @@ export function generateForgotPasswordEmailHTML({ token, user }: Partial<AuthEma
   return renderEmailShell({
     ctaLabel: 'Reset password',
     ctaUrl: url,
-    eyebrow: 'UnderSound security',
+    eyebrow: 'ablaut security',
     intro: `A password reset was requested for ${email}. Use the button below to choose a new password.`,
     outro: 'If you did not request this, you can ignore this email.',
     title: 'Reset your password',
@@ -167,22 +168,74 @@ export function generateForgotPasswordEmailHTML({ token, user }: Partial<AuthEma
 }
 
 export function generateForgotPasswordEmailSubject() {
-  return 'Reset your UnderSound password'
+  return 'Reset your ablaut password'
 }
 
 export function generateInvitedUserActivationEmailHTML(args: { activationUrl: string; email: string }) {
   return renderEmailShell({
-    ctaLabel: 'Activate account',
+    ctaLabel: 'Activate account and set password',
     ctaUrl: args.activationUrl,
-    eyebrow: 'UnderSound invitation',
-    intro: `You were invited to join UnderSound with ${args.email}. Use this secure activation link to set your password. If email verification is required, complete the verification email as well before logging in.`,
-    outro: 'This invitation does not contain or store a plaintext password.',
+    eyebrow: 'ablaut invitation',
+    intro: `You were invited to ablaut (${args.email}). Use the button below once to choose your password, then sign in.`,
     title: 'Activate your account',
   })
 }
 
 export function generateInvitedUserActivationEmailSubject() {
-  return 'Activate your UnderSound account'
+  return 'Activate your ablaut account'
+}
+
+export function generateOrganizationRequestEmailHTML(args: {
+  manageUrl: string
+  organizationName: string
+  requesterEmail: string
+}) {
+  return renderEmailShell({
+    ctaLabel: 'Review request',
+    ctaUrl: args.manageUrl,
+    eyebrow: 'ablaut organization',
+    intro: `${args.requesterEmail} requested to join ${args.organizationName}. Review the request in user management.`,
+    title: 'New organization membership request',
+  })
+}
+
+export function generateOrganizationRequestEmailSubject(args: { organizationName: string }) {
+  return `ablaut membership request: ${args.organizationName}`
+}
+
+export function generateOrganizationMembershipApprovedEmailHTML(args: {
+  dashboardUrl: string
+  organizationName: string
+  recipientEmail: string
+}) {
+  return renderEmailShell({
+    ctaLabel: 'Open dashboard',
+    ctaUrl: args.dashboardUrl,
+    eyebrow: 'ablaut organization',
+    intro: `Your request to join ${args.organizationName} was approved. You can sign in and work with that organization's events.`,
+    title: 'Membership approved',
+  })
+}
+
+export function generateOrganizationMembershipApprovedEmailSubject(args: { organizationName: string }) {
+  return `You were added to ${args.organizationName}`
+}
+
+export function generateOrganizationMembershipRejectedEmailHTML(args: {
+  organizationName: string
+  recipientEmail: string
+}) {
+  return renderEmailShell({
+    ctaLabel: 'Sign in',
+    ctaUrl: joinUrl(getBaseUrl(), '/'),
+    eyebrow: 'ablaut organization',
+    intro: `Your request to join ${args.organizationName} was not approved. Contact the organization manager if you think this was a mistake.`,
+    title: 'Membership request declined',
+  })
+}
+
+export function generateOrganizationMembershipRejectedEmailSubject(args: { organizationName: string }) {
+  return `Membership request: ${args.organizationName}`
 }
 
 export function generateSpeakerPasswordChangedEmailHTML(args: {
@@ -191,12 +244,12 @@ export function generateSpeakerPasswordChangedEmailHTML(args: {
   manageUrl: string
   recipientEmail: string
 }) {
-  const scope = [args.eventTitle, args.channelName].filter(Boolean).join(' / ') || 'an UnderSound speaker page'
+  const scope = [args.eventTitle, args.channelName].filter(Boolean).join(' / ') || 'an ablaut speaker page'
 
   return renderEmailShell({
     ctaLabel: 'Review event',
     ctaUrl: args.manageUrl,
-    eyebrow: 'UnderSound security',
+    eyebrow: 'ablaut security',
     intro: `The speaker password for ${scope} was changed. This notice was sent to ${args.recipientEmail}.`,
     outro: 'If this was unexpected, review event assignments and speaker links.',
     title: 'Speaker password changed',
@@ -204,7 +257,7 @@ export function generateSpeakerPasswordChangedEmailHTML(args: {
 }
 
 export function generateSpeakerPasswordChangedEmailSubject() {
-  return 'UnderSound speaker password changed'
+  return 'ablaut speaker password changed'
 }
 
 export function generateEventAssignmentEmailHTML(args: {
@@ -216,14 +269,14 @@ export function generateEventAssignmentEmailHTML(args: {
   return renderEmailShell({
     ctaLabel: 'Open event',
     ctaUrl: args.eventUrl,
-    eyebrow: 'UnderSound assignment',
+    eyebrow: 'ablaut assignment',
     intro: `${args.recipientEmail} was assigned as ${args.roleForEvent} for ${args.eventTitle}.`,
     title: 'You were assigned to an event',
   })
 }
 
 export function generateEventAssignmentEmailSubject(args: { eventTitle: string }) {
-  return `UnderSound event assignment: ${args.eventTitle}`
+  return `ablaut event assignment: ${args.eventTitle}`
 }
 
 export { getBaseUrl, joinUrl }

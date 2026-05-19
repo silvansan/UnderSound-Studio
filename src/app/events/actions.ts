@@ -47,7 +47,11 @@ function relationshipID(value: number | string | { id?: number | string } | null
   return value?.id
 }
 
-async function canDeleteEvent(payload: Payload, user: User, event: Event) {
+export async function canDeleteEvent(
+  payload: Payload,
+  user: User,
+  event: Pick<Event, 'createdBy' | 'id'>,
+) {
   if (isSuperAdminUser(user)) {
     return true
   }
@@ -108,8 +112,11 @@ export async function createEventAction(formData: FormData) {
       defaultLanguage: stringValue(formData, 'defaultLanguage') ?? 'en',
       description: stringValue(formData, 'description'),
       location: stringValue(formData, 'location'),
+      listenerPassword: stringValue(formData, 'listenerPassword'),
+      listenerPasswordEnabled: booleanValue(formData, 'listenerPasswordEnabled'),
       publicListenerEnabled: booleanValue(formData, 'publicListenerEnabled'),
       slug: slugify(stringValue(formData, 'slug') ?? title),
+      speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
       status: statusValue(formData),
       title,
@@ -143,8 +150,11 @@ export async function updateEventAction(formData: FormData) {
       defaultLanguage: stringValue(formData, 'defaultLanguage') ?? 'en',
       description: stringValue(formData, 'description'),
       location: stringValue(formData, 'location'),
+      listenerPassword: stringValue(formData, 'listenerPassword'),
+      listenerPasswordEnabled: booleanValue(formData, 'listenerPasswordEnabled'),
       publicListenerEnabled: booleanValue(formData, 'publicListenerEnabled'),
       slug: slugify(stringValue(formData, 'slug') ?? title),
+      speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
       status: statusValue(formData),
       title,
@@ -156,7 +166,7 @@ export async function updateEventAction(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath('/events')
   revalidatePath(`/events/${originalSlug}`)
-  redirect(`/events/${event.slug}`)
+  redirect(`/events/${event.slug}?settings=open`)
 }
 
 export async function deleteEventAction(formData: FormData) {
@@ -235,5 +245,11 @@ export async function deleteEventAction(formData: FormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/events')
+  revalidatePath('/channels')
+
+  if (stringValue(formData, 'returnTo') === 'list') {
+    return
+  }
+
   redirect('/events')
 }

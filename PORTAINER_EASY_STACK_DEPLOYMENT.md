@@ -1,10 +1,10 @@
 # Easy Portainer Stack Deployment
 
-This is the shortest path to deploy UnderSound Studio from Portainer.
+This is the shortest path to deploy ablaut from Portainer.
 
 The stack includes:
 
-- UnderSound Studio app
+- ablaut app
 - PostgreSQL database
 - LiveKit server
 - persistent uploads volume
@@ -18,13 +18,14 @@ The stack includes:
 4. Name it:
 
 ```text
-undersound-studio
+ablaut-studio
 ```
 
 5. Paste the contents of `PORTAINER_STACK_COPY_PASTE.yml` into the Web editor.
 6. Replace every `CHANGE_ME` value and example domain.
-7. If you prefer using `docker-compose.yml`, paste that file instead and add the environment variables below in Portainer's **Environment variables** section.
-8. Click **Deploy the stack**.
+7. For rollback-friendly deployments, paste `PORTAINER_STACK_PINNED.yml` instead and update only the Git tag when upgrading.
+8. If you prefer using `docker-compose.yml`, paste that file instead and add the environment variables below in Portainer's **Environment variables** section.
+9. Click **Deploy the stack**.
 
 ## 2. Copy-Paste Environment Variables
 
@@ -32,15 +33,15 @@ For local/LAN testing:
 
 ```env
 PAYLOAD_SECRET=replace-with-a-long-random-string-min-32-chars
-POSTGRES_USER=undersound
+POSTGRES_USER=ablaut
 POSTGRES_PASSWORD=replace-with-a-strong-db-password
-POSTGRES_DB=undersound
+POSTGRES_DB=ablaut
 PAYLOAD_DB_PUSH=true
 
 NEXT_PUBLIC_APP_URL=http://YOUR_SERVER_LAN_IP:3000
 PUBLIC_BASE_URL=http://YOUR_SERVER_LAN_IP:3000
 
-LIVEKIT_API_KEY=undersound
+LIVEKIT_API_KEY=ablaut
 LIVEKIT_API_SECRET=replace-with-a-long-random-livekit-secret
 LIVEKIT_URL=ws://YOUR_SERVER_LAN_IP:7880
 LIVEKIT_USE_EXTERNAL_IP=false
@@ -59,15 +60,15 @@ For cloud/production:
 
 ```env
 PAYLOAD_SECRET=replace-with-a-long-random-string-min-32-chars
-POSTGRES_USER=undersound
+POSTGRES_USER=ablaut
 POSTGRES_PASSWORD=replace-with-a-strong-db-password
-POSTGRES_DB=undersound
+POSTGRES_DB=ablaut
 PAYLOAD_DB_PUSH=true
 
-NEXT_PUBLIC_APP_URL=https://studio.example.com
-PUBLIC_BASE_URL=https://studio.example.com
+NEXT_PUBLIC_APP_URL=https://ablaut.example.com
+PUBLIC_BASE_URL=https://ablaut.example.com
 
-LIVEKIT_API_KEY=undersound
+LIVEKIT_API_KEY=ablaut
 LIVEKIT_API_SECRET=replace-with-a-long-random-livekit-secret
 LIVEKIT_URL=wss://livekit.example.com
 LIVEKIT_USE_EXTERNAL_IP=true
@@ -103,7 +104,7 @@ Use any reverse proxy manager you like, such as Nginx Proxy Manager, Traefik, Ca
 Forward this domain:
 
 ```text
-studio.example.com
+ablaut.example.com
 ```
 
 To:
@@ -185,7 +186,7 @@ For LAN testing without a proxy:
 
 | Port | Protocol | Purpose |
 | --- | --- | --- |
-| `3000` | TCP | UnderSound Studio app |
+| `3000` | TCP | ablaut app |
 | `7880` | TCP | LiveKit WebSocket/API |
 | `7881` | TCP | LiveKit RTC over TCP |
 | `50000-50100` | UDP | LiveKit RTC media |
@@ -199,7 +200,7 @@ Maildev ports `1080` and `1025` are only for local/staging email testing and sho
 After the stack starts, open:
 
 ```text
-https://studio.example.com
+https://ablaut.example.com
 ```
 
 or for LAN:
@@ -223,7 +224,7 @@ QR links use the host you opened the dashboard with.
 
 - If you open `http://localhost:3000`, QR codes will use `localhost` and phones will not reach them.
 - If you open `http://192.168.1.50:3000`, QR codes will use the LAN IP and phones on the same Wi-Fi can reach them.
-- If you open `https://studio.example.com`, QR codes will use the public cloud domain.
+- If you open `https://ablaut.example.com`, QR codes will use the public cloud domain.
 
 ## 7. Updating Later
 
@@ -231,8 +232,28 @@ QR links use the host you opened the dashboard with.
 2. Back up uploaded media.
 3. Update the stack image/source or paste the newer `docker-compose.yml`.
 4. Keep the same named volumes:
-   - `undersound_db`
-   - `undersound_uploads`
+   - `ablaut_db`
+   - `ablaut_uploads`
 5. Redeploy the stack.
 
 Do not remove the volumes unless you want to erase users, events, channels, settings, and uploads.
+
+For safer rollback, use `PORTAINER_STACK_PINNED.yml` and pin a Git tag:
+
+```yaml
+build:
+  context: https://github.com/silvansan/ablaut-Studio.git#ablaut-v0.2.0
+```
+
+To roll back, change the tag back to the previous known-good tag and redeploy without changing the stack name or volumes.
+
+## 8. Data safety on updates
+
+Do not delete the `ablaut_db` or `ablaut_uploads` volumes when updating the stack.
+
+Before major upgrades:
+
+1. Back up Postgres: `pg_dump -U ablaut ablaut`
+2. Back up the `ablaut_uploads` volume
+
+See `docs/MIGRATION.md` for copy-paste backup and restore commands.

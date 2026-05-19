@@ -70,7 +70,7 @@ export function getBrowserLiveKitURL(request: Request): string | undefined {
 }
 
 export function getLiveKitRoomName(eventSlug: string, channelSlug: string): string {
-  return `undersound_${eventSlug}_${channelSlug}`
+  return `ablaut_${eventSlug}_${channelSlug}`
 }
 
 export function createLiveKitIdentity(prefix: 'listener' | 'speaker'): string {

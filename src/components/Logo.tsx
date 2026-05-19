@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { APP_PRONUNCIATION, APP_STUDIO_NAME } from '@/lib/branding'
 import { LogoImage } from './LogoImage'
 
 type LogoProps = {
@@ -20,10 +21,10 @@ export function Logo({ className = '', theme = 'default' }: LogoProps) {
       </span>
       <span className="leading-tight">
         <span className="block text-base font-semibold tracking-tight" style={{ color: titleColor }}>
-          UnderSound
+          {APP_STUDIO_NAME}
         </span>
         <span className="block text-xs font-medium uppercase tracking-[0.16em]" style={{ color: subtitleColor }}>
-          Live Audio Studio
+          {APP_PRONUNCIATION}
         </span>
       </span>
     </Link>

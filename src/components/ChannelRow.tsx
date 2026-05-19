@@ -1,12 +1,15 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { deleteChannelAction } from '@/app/events/[eventSlug]/channels/actions'
 import { IconActionLink } from '@/components/ActionIcons'
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
 import { QRPopup } from '@/components/QRPopup'
 
 type ChannelRowProps = {
+  canDelete?: boolean
+  channelId: number
   description?: string | null
   enabled?: boolean | null
   eventSlug: string
@@ -22,6 +25,8 @@ type ChannelRowProps = {
 }
 
 export function ChannelRow({
+  canDelete = false,
+  channelId,
   description,
   enabled,
   eventSlug,
@@ -37,6 +42,7 @@ export function ChannelRow({
 }: ChannelRowProps) {
   const router = useRouter()
   const href = `/events/${eventSlug}/channels/${slug}`
+  const deleteFormId = `delete-channel-${channelId}`
 
   function openRow() {
     router.push(href)
@@ -44,7 +50,7 @@ export function ChannelRow({
 
   return (
     <li
-      className="grid cursor-pointer gap-3 rounded-2xl border bg-white/75 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[1.1fr_1fr_1.2fr_1.2fr_100px] lg:items-center"
+      className="grid cursor-pointer gap-3 rounded-2xl border bg-white/75 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[1.1fr_1fr_1.2fr_1.2fr_88px] lg:items-center"
       onClick={openRow}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -100,9 +106,24 @@ export function ChannelRow({
         {listenerPageEnabled === false ? <span className="us-chip us-chip-warning">Off</span> : null}
       </div>
 
-      <Link href={href} className="us-button-secondary justify-self-start px-3 py-2 text-sm font-medium lg:justify-self-end" onClick={(event) => event.stopPropagation()}>
-        Manage
-      </Link>
+      <div className="flex flex-wrap items-center gap-2 lg:justify-end" onClick={(event) => event.stopPropagation()}>
+        {canDelete ? (
+          <form action={deleteChannelAction} id={deleteFormId}>
+            <input name="eventSlug" type="hidden" value={eventSlug} />
+            <input name="id" type="hidden" value={channelId} />
+            <input name="returnTo" type="hidden" value="list" />
+            <ConfirmSubmitButton
+              action={deleteChannelAction}
+              className="rounded-2xl border px-3 py-2 text-sm font-medium"
+              confirmMessage="Delete this channel? This removes its listener/speaker links and QR targets."
+              formId={deleteFormId}
+              title="Delete channel"
+            >
+              Delete
+            </ConfirmSubmitButton>
+          </form>
+        ) : null}
+      </div>
     </li>
   )
 }

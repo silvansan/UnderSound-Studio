@@ -5,7 +5,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
-import { importUnderSoundConfig } from '@/lib/config-transfer'
+import { importAblautConfig } from '@/lib/config-transfer'
 import { isSuperAdminUser } from '@/lib/permissions'
 
 function stringValue(formData: FormData, key: string): string | undefined {
@@ -25,6 +25,16 @@ function checkedValue(formData: FormData, key: string): boolean {
   return formData.get(key) === 'on'
 }
 
+function qrStyleValue(formData: FormData) {
+  const value = stringValue(formData, 'defaultQrStyle')
+
+  if (value === 'high-contrast') {
+    return value
+  }
+
+  return 'ablaut-default'
+}
+
 export async function updateSiteSettingsAction(formData: FormData) {
   const user = await requireAppUser()
 
@@ -38,12 +48,12 @@ export async function updateSiteSettingsAction(formData: FormData) {
     slug: 'site-settings',
     data: {
       allowPublicListenerPages: checkedValue(formData, 'allowPublicListenerPages'),
-      defaultQrStyle: stringValue(formData, 'defaultQrStyle') === 'high-contrast' ? 'high-contrast' : 'undersound-default',
+      defaultQrStyle: qrStyleValue(formData),
       defaultTokenExpiry: numberValue(formData, 'defaultTokenExpiry') ?? 3600,
       livekitPublicUrl: stringValue(formData, 'livekitPublicUrl'),
       publicBaseUrl: stringValue(formData, 'publicBaseUrl'),
       requireEmailVerification: checkedValue(formData, 'requireEmailVerification'),
-      siteName: stringValue(formData, 'siteName') ?? 'UnderSound',
+      siteName: stringValue(formData, 'siteName') ?? 'ablaut',
       supportEmail: stringValue(formData, 'supportEmail'),
     },
     overrideAccess: true,
@@ -63,10 +73,11 @@ export async function importConfigAction(formData: FormData) {
 
   const json = JSON.parse(await file.text()) as unknown
 
-  await importUnderSoundConfig(user, json, scope)
+  await importAblautConfig(user, json, scope)
 
   revalidatePath('/dashboard')
   revalidatePath('/events')
   revalidatePath('/channels')
+  revalidatePath('/users')
   revalidatePath('/settings')
 }

@@ -5,19 +5,38 @@ import { randomBytes } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { getPayload } from 'payload'
 
+import { canManageAssignment } from '@/app/events/[eventSlug]/settings/actions'
 import { requireAppUser } from '@/lib/app-auth'
 import {
-  generateInvitedUserActivationEmailHTML,
-  generateInvitedUserActivationEmailSubject,
+  canManageUserInOrganization,
+  getManageableOrganizationIDs,
+} from '@/lib/organizations'
+import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+import {
+  generateOrganizationMembershipApprovedEmailHTML,
+  generateOrganizationMembershipApprovedEmailSubject,
+  generateOrganizationMembershipRejectedEmailHTML,
+  generateOrganizationMembershipRejectedEmailSubject,
+  generateOrganizationRequestEmailHTML,
+  generateOrganizationRequestEmailSubject,
   getBaseUrl,
   joinUrl,
 } from '@/lib/email'
-import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+import { sendUserActivationInviteEmail, sendUserPasswordResetEmail } from '@/lib/user-management'
+import { completeUserActivation } from '@/lib/user-activation'
+import type { User } from '@/payload-types'
 
 function stringValue(formData: FormData, key: string): string | undefined {
   const value = formData.get(key)
 
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined
+}
+
+function numericValue(formData: FormData, key: string): number | undefined {
+  const value = stringValue(formData, key)
+  const parsed = value ? Number(value) : NaN
+
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function roleValue(formData: FormData, canSetAdmin: boolean): 'admin' | 'moderator' {
@@ -34,6 +53,37 @@ function updateRoleValue(formData: FormData): 'admin' | 'moderator' | 'super_adm
   return 'moderator'
 }
 
+function membershipRoleValue(formData: FormData): 'owner' | 'manager' | 'moderator' | 'viewer' {
+  const role = stringValue(formData, 'roleInOrganization')
+
+  if (role === 'owner' || role === 'manager' || role === 'viewer') {
+    return role
+  }
+
+  return 'moderator'
+}
+
+async function assertCanManageOrganization(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  currentUser: Awaited<ReturnType<typeof requireAppUser>>,
+  organizationID: number,
+) {
+  if (isSuperAdminUser(currentUser)) {
+    return
+  }
+
+  const manageableOrganizationIDs = await getManageableOrganizationIDs({
+    payload,
+    user: currentUser,
+  } as never)
+
+  if (manageableOrganizationIDs === null || manageableOrganizationIDs.includes(organizationID)) {
+    return
+  }
+
+  throw new Error('You do not have permission to manage this organization.')
+}
+
 export async function inviteUserAction(formData: FormData) {
   const currentUser = await requireAppUser()
 
@@ -44,46 +94,51 @@ export async function inviteUserAction(formData: FormData) {
   const payload = await getPayload({ config: configPromise })
   const email = stringValue(formData, 'email')?.toLowerCase()
   const name = stringValue(formData, 'name')
+  const organizationID = numericValue(formData, 'organizationId')
 
-  if (!email || !name) {
-    throw new Error('Name and email are required.')
+  if (!email || !name || !organizationID) {
+    throw new Error('Name, email, and organization are required.')
   }
+
+  await assertCanManageOrganization(payload, currentUser, organizationID)
 
   const temporaryPassword = randomBytes(32).toString('base64url')
   const canSetAdmin = isSuperAdminUser(currentUser)
-  const data = {
-    email,
-    invitationStatus: 'pending' as const,
-    invitedAt: new Date().toISOString(),
-    invitedBy: currentUser.id,
-    name,
-    password: temporaryPassword,
-    role: canSetAdmin ? roleValue(formData, true) : 'moderator' as const,
-  }
+  const globalRole = canSetAdmin ? roleValue(formData, true) : 'moderator'
 
-  await payload.create({
+  const createdUser = await payload.create({
     collection: 'users',
-    data,
-    disableVerificationEmail: false,
+    data: {
+      _verified: false,
+      active: true,
+      email,
+      invitationStatus: 'pending',
+      invitedAt: new Date().toISOString(),
+      invitedBy: currentUser.id,
+      name,
+      password: temporaryPassword,
+      role: globalRole,
+    },
+    disableVerificationEmail: true,
     overrideAccess: false,
     user: currentUser,
   })
 
-  const resetToken = await payload.forgotPassword({
-    collection: 'users',
-    data: { email },
-    disableEmail: true,
+  await payload.create({
+    collection: 'organization-memberships',
+    data: {
+      invitedAt: new Date().toISOString(),
+      invitedBy: currentUser.id,
+      organization: organizationID,
+      roleInOrganization: membershipRoleValue(formData),
+      status: 'pending',
+      user: createdUser.id,
+    },
     overrideAccess: true,
+    user: currentUser,
   })
 
-  await payload.sendEmail({
-    html: generateInvitedUserActivationEmailHTML({
-      activationUrl: joinUrl(getBaseUrl(), `/reset-password/${resetToken ?? ''}`),
-      email,
-    }),
-    subject: generateInvitedUserActivationEmailSubject(),
-    to: email,
-  })
+  await sendUserActivationInviteEmail(payload, email)
 
   revalidatePath('/users')
 }
@@ -127,6 +182,233 @@ export async function updateUserAction(formData: FormData) {
   revalidatePath('/users')
 }
 
+export async function sendPasswordResetForUserAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isAdminUser(currentUser)) {
+    throw new Error('Only admins can send password resets.')
+  }
+
+  const userID = stringValue(formData, 'id')
+  const organizationID = numericValue(formData, 'organizationId')
+
+  if (!userID) {
+    throw new Error('User ID is required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  const targetUser = await payload.findByID({
+    id: userID,
+    collection: 'users',
+    overrideAccess: false,
+    user: currentUser,
+  })
+
+  if (organizationID) {
+    const allowed = await canManageUserInOrganization(
+      { payload, user: currentUser } as never,
+      userID,
+      organizationID,
+    )
+
+    if (!allowed) {
+      throw new Error('You do not have permission to reset this user password.')
+    }
+  } else if (!isSuperAdminUser(currentUser)) {
+    throw new Error('Organization context is required.')
+  }
+
+  await sendUserPasswordResetEmail(payload, targetUser.email)
+
+  revalidatePath('/users')
+}
+
+export async function resendInviteForUserAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isAdminUser(currentUser)) {
+    throw new Error('Only admins can resend invites.')
+  }
+
+  const userID = stringValue(formData, 'id')
+  const organizationID = numericValue(formData, 'organizationId')
+
+  if (!userID || !organizationID) {
+    throw new Error('User ID and organization are required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  const targetUser = await payload.findByID({
+    id: userID,
+    collection: 'users',
+    overrideAccess: false,
+    user: currentUser,
+  })
+
+  if (targetUser.invitationStatus !== 'pending') {
+    throw new Error('This user is not waiting for activation.')
+  }
+
+  const allowed = await canManageUserInOrganization(
+    { payload, user: currentUser } as never,
+    userID,
+    organizationID,
+  )
+
+  if (!allowed) {
+    throw new Error('You do not have permission to resend this invite.')
+  }
+
+  await sendUserActivationInviteEmail(payload, targetUser.email)
+
+  revalidatePath('/users')
+}
+
+export async function approveMembershipAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isAdminUser(currentUser)) {
+    throw new Error('Only admins can approve membership requests.')
+  }
+
+  const membershipID = numericValue(formData, 'membershipId')
+  const organizationID = numericValue(formData, 'organizationId')
+
+  if (!membershipID || !organizationID) {
+    throw new Error('Membership ID and organization are required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  await assertCanManageOrganization(payload, currentUser, organizationID)
+
+  const existingMembership = await payload.findByID({
+    id: membershipID,
+    collection: 'organization-memberships',
+    depth: 1,
+    overrideAccess: true,
+  })
+
+  const updatedMembership = await payload.update({
+    id: membershipID,
+    collection: 'organization-memberships',
+    data: {
+      approvedBy: currentUser.id,
+      status: 'active',
+    },
+    depth: 1,
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  const approvedUser =
+    typeof updatedMembership.user === 'object' ? updatedMembership.user : null
+  const organization =
+    typeof existingMembership.organization === 'object' ? existingMembership.organization : null
+
+  if (approvedUser?.id) {
+    if (approvedUser.invitationStatus === 'pending') {
+      await completeUserActivation(payload, approvedUser.id)
+    }
+
+    if (approvedUser.email && organization?.name) {
+      await payload.sendEmail({
+        html: generateOrganizationMembershipApprovedEmailHTML({
+          dashboardUrl: joinUrl(getBaseUrl(), '/dashboard'),
+          organizationName: organization.name,
+          recipientEmail: approvedUser.email,
+        }),
+        subject: generateOrganizationMembershipApprovedEmailSubject({ organizationName: organization.name }),
+        to: approvedUser.email,
+      })
+    }
+  }
+
+  revalidatePath('/users')
+}
+
+export async function rejectMembershipAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isAdminUser(currentUser)) {
+    throw new Error('Only admins can reject membership requests.')
+  }
+
+  const membershipID = numericValue(formData, 'membershipId')
+  const organizationID = numericValue(formData, 'organizationId')
+
+  if (!membershipID || !organizationID) {
+    throw new Error('Membership ID and organization are required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  await assertCanManageOrganization(payload, currentUser, organizationID)
+
+  const existingMembership = await payload.findByID({
+    id: membershipID,
+    collection: 'organization-memberships',
+    depth: 1,
+    overrideAccess: true,
+  })
+
+  await payload.update({
+    id: membershipID,
+    collection: 'organization-memberships',
+    data: {
+      status: 'rejected',
+    },
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  const requester =
+    typeof existingMembership.user === 'object' ? existingMembership.user : null
+  const organization =
+    typeof existingMembership.organization === 'object' ? existingMembership.organization : null
+
+  if (requester?.email && organization?.name) {
+    await payload.sendEmail({
+      html: generateOrganizationMembershipRejectedEmailHTML({
+        organizationName: organization.name,
+        recipientEmail: requester.email,
+      }),
+      subject: generateOrganizationMembershipRejectedEmailSubject({ organizationName: organization.name }),
+      to: requester.email,
+    })
+  }
+
+  revalidatePath('/users')
+}
+
+export async function removeMembershipAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isAdminUser(currentUser)) {
+    throw new Error('Only admins can remove organization members.')
+  }
+
+  const membershipID = numericValue(formData, 'membershipId')
+  const organizationID = numericValue(formData, 'organizationId')
+
+  if (!membershipID || !organizationID) {
+    throw new Error('Membership ID and organization are required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  await assertCanManageOrganization(payload, currentUser, organizationID)
+
+  await payload.update({
+    id: membershipID,
+    collection: 'organization-memberships',
+    data: {
+      status: 'revoked',
+    },
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  revalidatePath('/users')
+}
+
 export async function deleteUserAction(formData: FormData) {
   const currentUser = await requireAppUser()
 
@@ -135,6 +417,7 @@ export async function deleteUserAction(formData: FormData) {
   }
 
   const id = stringValue(formData, 'id')
+  const organizationID = numericValue(formData, 'organizationId')
 
   if (!id || String(currentUser.id) === id) {
     throw new Error('A valid user other than yourself is required.')
@@ -144,12 +427,24 @@ export async function deleteUserAction(formData: FormData) {
   const targetUser = await payload.findByID({
     id,
     collection: 'users',
-    overrideAccess: true,
+    overrideAccess: false,
     user: currentUser,
   })
 
-  if (!isSuperAdminUser(currentUser) && targetUser.role !== 'moderator') {
-    throw new Error('Admins can only delete moderator accounts.')
+  if (!isSuperAdminUser(currentUser) && targetUser.role !== 'moderator' && targetUser.role !== 'admin') {
+    throw new Error('You can only delete admin or moderator accounts in your organizations.')
+  }
+
+  if (organizationID) {
+    const allowed = await canManageUserInOrganization(
+      { payload, user: currentUser } as never,
+      id,
+      organizationID,
+    )
+
+    if (!allowed) {
+      throw new Error('You do not have permission to delete this user.')
+    }
   }
 
   const assignments = await payload.find({
@@ -175,11 +470,426 @@ export async function deleteUserAction(formData: FormData) {
     })
   }
 
+  const memberships = await payload.find({
+    collection: 'organization-memberships',
+    depth: 0,
+    limit: 1000,
+    overrideAccess: true,
+    pagination: false,
+    where: {
+      user: {
+        equals: id,
+      },
+    },
+  })
+
+  for (const membership of memberships.docs) {
+    await payload.delete({
+      id: membership.id,
+      collection: 'organization-memberships',
+      overrideAccess: true,
+      user: currentUser,
+    })
+  }
+
   await payload.delete({
     id,
     collection: 'users',
     overrideAccess: true,
     user: currentUser,
+  })
+
+  revalidatePath('/users')
+}
+
+export async function requestOrganizationMembershipAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+  const organizationSlug = stringValue(formData, 'organizationSlug')
+
+  if (!organizationSlug) {
+    throw new Error('Organization slug is required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  const organizations = await payload.find({
+    collection: 'organizations',
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    where: {
+      and: [
+        {
+          slug: {
+            equals: organizationSlug,
+          },
+        },
+        {
+          active: {
+            equals: true,
+          },
+        },
+      ],
+    },
+  })
+
+  const organization = organizations.docs[0]
+
+  if (!organization) {
+    throw new Error('Organization not found.')
+  }
+
+  const existingMembership = await payload.find({
+    collection: 'organization-memberships',
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    where: {
+      and: [
+        {
+          organization: {
+            equals: organization.id,
+          },
+        },
+        {
+          user: {
+            equals: currentUser.id,
+          },
+        },
+      ],
+    },
+  })
+
+  if (existingMembership.docs.length > 0) {
+    throw new Error('You already have a membership request or membership for this organization.')
+  }
+
+  await payload.create({
+    collection: 'organization-memberships',
+    data: {
+      organization: organization.id,
+      requestedAt: new Date().toISOString(),
+      requestedBy: currentUser.id,
+      roleInOrganization: 'moderator',
+      status: 'pending',
+      user: currentUser.id,
+    },
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  const managers = await payload.find({
+    collection: 'organization-memberships',
+    depth: 1,
+    limit: 50,
+    overrideAccess: true,
+    pagination: false,
+    where: {
+      and: [
+        {
+          organization: {
+            equals: organization.id,
+          },
+        },
+        {
+          status: {
+            equals: 'active',
+          },
+        },
+        {
+          roleInOrganization: {
+            in: ['owner', 'manager'],
+          },
+        },
+      ],
+    },
+  })
+
+  const manageUrl = joinUrl(getBaseUrl(), '/users')
+
+  for (const membership of managers.docs) {
+    const manager = typeof membership.user === 'object' ? membership.user : null
+    const managerEmail = manager && typeof manager.email === 'string' ? manager.email : null
+
+    if (!managerEmail) {
+      continue
+    }
+
+    await payload.sendEmail({
+      html: generateOrganizationRequestEmailHTML({
+        manageUrl,
+        organizationName: organization.name,
+        requesterEmail: currentUser.email ?? 'A user',
+      }),
+      subject: generateOrganizationRequestEmailSubject({ organizationName: organization.name }),
+      to: managerEmail,
+    })
+  }
+
+  revalidatePath('/users')
+  revalidatePath('/organizations')
+}
+
+async function deleteAllOrganizationMemberships(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  organizationID: number,
+  currentUser: User,
+) {
+  const pageSize = 100
+
+  while (true) {
+    const memberships = await payload.find({
+      collection: 'organization-memberships',
+      depth: 0,
+      limit: pageSize,
+      overrideAccess: true,
+      pagination: false,
+      where: {
+        organization: {
+          equals: organizationID,
+        },
+      },
+    })
+
+    if (memberships.docs.length === 0) {
+      return
+    }
+
+    for (const membership of memberships.docs) {
+      await payload.delete({
+        id: membership.id,
+        collection: 'organization-memberships',
+        overrideAccess: true,
+        user: currentUser,
+      })
+    }
+  }
+}
+
+export async function deleteOrganizationAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isSuperAdminUser(currentUser)) {
+    throw new Error('Only super admins can delete organizations.')
+  }
+
+  const organizationID = numericValue(formData, 'organizationId')
+
+  if (!organizationID) {
+    throw new Error('Organization ID is required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+
+  await payload.findByID({
+    id: organizationID,
+    collection: 'organizations',
+    depth: 0,
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  const events = await payload.count({
+    collection: 'events',
+    overrideAccess: true,
+    where: {
+      organization: {
+        equals: organizationID,
+      },
+    },
+  })
+
+  if (events.totalDocs > 0) {
+    throw new Error(
+      `Remove or reassign all ${events.totalDocs} event${events.totalDocs === 1 ? '' : 's'} in this organization before deleting it.`,
+    )
+  }
+
+  await deleteAllOrganizationMemberships(payload, organizationID, currentUser)
+
+  await payload.delete({
+    id: organizationID,
+    collection: 'organizations',
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  revalidatePath('/users')
+  revalidatePath('/organizations')
+  revalidatePath('/events')
+  revalidatePath('/dashboard')
+}
+
+export async function createOrganizationAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isSuperAdminUser(currentUser)) {
+    throw new Error('Only super admins can create organizations.')
+  }
+
+  const name = stringValue(formData, 'name')
+  const slugInput = stringValue(formData, 'slug')
+
+  if (!name) {
+    throw new Error('Organization name is required.')
+  }
+
+  const slug =
+    slugInput ??
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+  const payload = await getPayload({ config: configPromise })
+
+  await payload.create({
+    collection: 'organizations',
+    data: {
+      active: true,
+      createdBy: currentUser.id,
+      name,
+      slug,
+    },
+    overrideAccess: true,
+    user: currentUser,
+  })
+
+  revalidatePath('/users')
+  revalidatePath('/organizations')
+}
+
+function booleanValue(formData: FormData, key: string): boolean {
+  return formData.get(key) === 'on'
+}
+
+function eventRoleValue(formData: FormData): 'admin' | 'moderator' | 'viewer' {
+  const value = stringValue(formData, 'roleForEvent')
+
+  if (value === 'admin' || value === 'viewer') {
+    return value
+  }
+
+  return 'moderator'
+}
+
+function permissionsFromForm(formData: FormData) {
+  return {
+    canCreateChannels: booleanValue(formData, 'canCreateChannels'),
+    canDeleteChannels: booleanValue(formData, 'canDeleteChannels'),
+    canEditEvent: booleanValue(formData, 'canEditEvent'),
+    canManageSpeakerPassword: booleanValue(formData, 'canManageSpeakerPassword'),
+    canViewQR: booleanValue(formData, 'canViewQR'),
+  }
+}
+
+export async function upsertUserEventAssignmentAction(formData: FormData) {
+  const user = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  const eventID = stringValue(formData, 'eventID')
+  const targetUserID = stringValue(formData, 'userID')
+  const roleForEvent = eventRoleValue(formData)
+
+  if (!eventID || !targetUserID) {
+    throw new Error('Event and user are required.')
+  }
+
+  if (!(await canManageAssignment(payload, user, eventID))) {
+    throw new Error('You do not have permission to manage assignments for this event.')
+  }
+
+  const targetUser = await payload.findByID({
+    id: targetUserID,
+    collection: 'users',
+    overrideAccess: false,
+    user,
+  })
+
+  if (!isSuperAdminUser(user)) {
+    if (roleForEvent === 'admin' || targetUser.role !== 'moderator') {
+      throw new Error('Admins can only assign moderators to events.')
+    }
+  }
+
+  const existing = await payload.find({
+    collection: 'event-assignments',
+    depth: 0,
+    limit: 1,
+    overrideAccess: false,
+    pagination: false,
+    user,
+    where: {
+      and: [
+        {
+          event: {
+            equals: Number(eventID),
+          },
+        },
+        {
+          user: {
+            equals: Number(targetUserID),
+          },
+        },
+      ],
+    },
+  })
+
+  const data = {
+    event: Number(eventID),
+    permissions: permissionsFromForm(formData),
+    roleForEvent,
+    user: Number(targetUserID),
+  }
+
+  if (existing.docs[0]) {
+    await payload.update({
+      id: existing.docs[0].id,
+      collection: 'event-assignments',
+      data,
+      overrideAccess: false,
+      user,
+    })
+  } else {
+    await payload.create({
+      collection: 'event-assignments',
+      data,
+      overrideAccess: false,
+      user,
+    })
+  }
+
+  revalidatePath('/users')
+}
+
+export async function deleteUserEventAssignmentAction(formData: FormData) {
+  const user = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  const assignmentID = stringValue(formData, 'assignmentID')
+
+  if (!assignmentID) {
+    throw new Error('Assignment is required.')
+  }
+
+  const assignment = await payload.findByID({
+    id: assignmentID,
+    collection: 'event-assignments',
+    overrideAccess: true,
+    user,
+  })
+  const eventID =
+    typeof assignment.event === 'number' ? assignment.event : assignment.event?.id
+
+  if (!eventID || !(await canManageAssignment(payload, user, eventID))) {
+    throw new Error('You do not have permission to remove this event assignment.')
+  }
+
+  await payload.delete({
+    id: assignmentID,
+    collection: 'event-assignments',
+    overrideAccess: true,
+    user,
   })
 
   revalidatePath('/users')

@@ -26,6 +26,7 @@ export type DashboardChannel = Pick<
 
 export type DashboardEvent = Pick<
   Event,
+  | 'createdBy'
   | 'dateEnd'
   | 'dateStart'
   | 'defaultLanguage'
@@ -53,6 +54,7 @@ export type DashboardSummary = {
 function normalizeEvent(event: Event, channelCount = 0): DashboardEvent {
   return {
     channelCount,
+    createdBy: event.createdBy,
     dateEnd: event.dateEnd,
     dateStart: event.dateStart,
     defaultLanguage: event.defaultLanguage,
@@ -189,7 +191,9 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   }
 }
 
-export async function getDashboardAllChannels(limit = 100): Promise<(DashboardChannel & { eventSlug: string; eventTitle: string })[]> {
+export async function getDashboardAllChannels(
+  limit = 100,
+): Promise<(DashboardChannel & { eventID: number; eventSlug: string; eventTitle: string })[]> {
   const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
   const channels = await payload
@@ -212,9 +216,11 @@ export async function getDashboardAllChannels(limit = 100): Promise<(DashboardCh
 
   return channels.docs.map((channel) => {
     const event = typeof channel.event === 'object' ? channel.event : null
+    const eventID = event?.id ?? (typeof channel.event === 'number' ? channel.event : 0)
 
     return {
       ...normalizeChannel(channel),
+      eventID,
       eventSlug: event?.slug ?? String(channel.event),
       eventTitle: event?.title ?? String(channel.event),
     }

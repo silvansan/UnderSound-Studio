@@ -1,8 +1,8 @@
 export function PayloadAdminIcon() {
   return (
-    <div className="undersound-admin-icon">
+    <div className="ablaut-admin-icon">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img alt="UnderSound" src="/undersound-logo.png" />
+      <img alt="ablaut" src="/ablaut-icon.png" />
     </div>
   )
 }

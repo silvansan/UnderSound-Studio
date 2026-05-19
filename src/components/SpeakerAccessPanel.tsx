@@ -3,6 +3,8 @@
 import { Room, RoomEvent } from 'livekit-client'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
+import { AudioEffectToggle } from '@/components/AudioEffectToggle'
+
 type SpeakerAccessPanelProps = {
   audioQualityDefaults?: AudioQualityControls
   channelSlug: string
@@ -97,6 +99,22 @@ export function SpeakerAccessPanel({
       setPublishMessage('Microphone permission was denied or no microphone is available.')
     }
   }, [audioConstraints])
+
+  useEffect(() => {
+    if (!passwordRequired && initialHasAccess) {
+      void fetch('/api/speaker/verify-password', {
+        body: JSON.stringify({
+          channelSlug,
+          eventSlug,
+          password: '',
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      })
+    }
+  }, [channelSlug, eventSlug, initialHasAccess, passwordRequired])
 
   useEffect(() => {
     if (hasAccess) {
@@ -311,28 +329,31 @@ export function SpeakerAccessPanel({
         <p className="mt-2 text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
           These affect this speaker session only. Stop publishing before changing them.
         </p>
-        <div className="mt-4 space-y-3 text-sm" style={{ color: 'var(--us-text)' }}>
-          {[
-            ['echoCancellation', 'Echo cancellation', 'Off by default to avoid music distortion'],
-            ['noiseSuppression', 'Noise suppression', 'Off by default for natural source audio'],
-            ['autoGainControl', 'Auto gain control', 'Off by default to preserve dynamics'],
-          ].map(([key, label, hint]) => (
-            <label key={label} className="flex items-start gap-3 rounded-2xl bg-white/70 px-3 py-3">
-              <input
-                checked={audioQuality[key as keyof AudioQualityControls]}
-                className="mt-1"
-                disabled={publishState === 'publishing' || publishState === 'connecting'}
-                onChange={(event) => updateAudioQuality(key as keyof AudioQualityControls, event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                <span className="block font-medium">{label}</span>
-                <span className="block text-xs" style={{ color: 'var(--us-muted)' }}>
-                  {hint}
-                </span>
-              </span>
-            </label>
-          ))}
+        <div className="mt-4 space-y-3">
+          <AudioEffectToggle
+            checked={audioQuality.echoCancellation}
+            disabled={publishState === 'publishing' || publishState === 'connecting'}
+            hint="Off by default to avoid music distortion"
+            label="Echo cancellation"
+            onChange={(checked) => updateAudioQuality('echoCancellation', checked)}
+            tone="green"
+          />
+          <AudioEffectToggle
+            checked={audioQuality.noiseSuppression}
+            disabled={publishState === 'publishing' || publishState === 'connecting'}
+            hint="Off by default for natural source audio"
+            label="Noise suppression"
+            onChange={(checked) => updateAudioQuality('noiseSuppression', checked)}
+            tone="blue"
+          />
+          <AudioEffectToggle
+            checked={audioQuality.autoGainControl}
+            disabled={publishState === 'publishing' || publishState === 'connecting'}
+            hint="Off by default to preserve dynamics"
+            label="Auto gain control"
+            onChange={(checked) => updateAudioQuality('autoGainControl', checked)}
+            tone="green"
+          />
         </div>
       </div>
     </article>

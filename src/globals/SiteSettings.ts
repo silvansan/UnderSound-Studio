@@ -19,7 +19,7 @@ export const SiteSettings: GlobalConfig = {
             {
               name: 'siteName',
               type: 'text',
-              defaultValue: 'UnderSound',
+              defaultValue: 'ablaut',
             },
             {
               name: 'defaultLogo',
@@ -67,9 +67,9 @@ export const SiteSettings: GlobalConfig = {
             {
               name: 'defaultQrStyle',
               type: 'select',
-              defaultValue: 'undersound-default',
+              defaultValue: 'ablaut-default',
               options: [
-                { label: 'UnderSound Default', value: 'undersound-default' },
+                { label: 'ablaut default', value: 'ablaut-default' },
                 { label: 'High Contrast', value: 'high-contrast' },
               ],
             },

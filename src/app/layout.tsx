@@ -3,9 +3,10 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 
 import { HashRouteRedirect } from '@/components/HashRouteRedirect'
+import { APP_STUDIO_NAME } from '@/lib/branding'
 
 export const metadata: Metadata = {
-  description: 'UnderSound — live translation and audio for events',
+  description: 'ablaut-Studio — live translation and audio for events',
   icons: {
     apple: '/apple-icon.png',
     icon: [
@@ -26,8 +27,8 @@ export const metadata: Metadata = {
     shortcut: '/favicon.ico',
   },
   title: {
-    default: 'UnderSound Studio',
-    template: '%s | UnderSound Studio',
+    default: APP_STUDIO_NAME,
+    template: `${APP_STUDIO_NAME} | %s`,
   },
 }
 

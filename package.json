@@ -1,13 +1,14 @@
 {
-  "name": "undersound-v2",
+  "name": "ablaut",
   "version": "0.1.0",
-  "description": "UnderSound v2 — Payload CMS 3 + Next.js live translation platform",
+  "description": "ablaut — Payload CMS 3 + Next.js live translation platform",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "devsafe": "rimraf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "generate:brand": "node scripts/generate-brand-assets.mjs",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",

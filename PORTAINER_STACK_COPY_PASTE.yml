@@ -1,33 +1,35 @@
-# UnderSound Studio - Portainer copy/paste stack
+# ablaut - Portainer copy/paste stack
 #
 # How to use:
-# 1. In Portainer, create a new stack named "undersound-studio".
+# 1. In Portainer, create a new stack named "ablaut-studio".
 # 2. Paste this whole file into the Web editor.
 # 3. Replace every CHANGE_ME / example domain before deploying.
 # 4. Keep the named volumes when updating the stack.
 #
 # Proxy notes:
-# - Proxy https://studio.example.com -> app:3000 with WebSocket support.
+# - Proxy https://ablaut.example.com -> app:3000 with WebSocket support.
 # - Proxy https://livekit.example.com -> livekit:7880 with WebSocket support.
 # - Also forward 7881/tcp and 50000-50100/udp to the Docker host for LiveKit RTC media.
 # - Do not expose Postgres 5432 publicly.
 
+name: ablaut-studio
+
 services:
   app:
     build:
-      context: https://github.com/silvansan/UnderSound-Studio.git
+      context: https://github.com/silvansan/ablaut-Studio.git
       dockerfile: Dockerfile
     environment:
       NODE_ENV: production
       PAYLOAD_SECRET: CHANGE_ME_LONG_RANDOM_PAYLOAD_SECRET_MIN_32_CHARS
-      DATABASE_URI: postgres://undersound:CHANGE_ME_DB_PASSWORD@db:5432/undersound
-      POSTGRES_USER: undersound
+      DATABASE_URI: postgres://ablaut:CHANGE_ME_DB_PASSWORD@db:5432/ablaut
+      POSTGRES_USER: ablaut
       POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
-      POSTGRES_DB: undersound
+      POSTGRES_DB: ablaut
       PAYLOAD_DB_PUSH: 'true'
-      NEXT_PUBLIC_APP_URL: https://studio.example.com
-      PUBLIC_BASE_URL: https://studio.example.com
-      LIVEKIT_API_KEY: undersound
+      NEXT_PUBLIC_APP_URL: https://ablaut.example.com
+      PUBLIC_BASE_URL: https://ablaut.example.com
+      LIVEKIT_API_KEY: ablaut
       LIVEKIT_API_SECRET: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
       LIVEKIT_URL: wss://livekit.example.com
       SMTP_HOST: smtp.example.com
@@ -45,7 +47,7 @@ services:
       livekit:
         condition: service_started
     volumes:
-      - undersound_uploads:/app/media
+      - ablaut_uploads:/app/media
     restart: unless-stopped
 
   livekit:
@@ -62,7 +64,7 @@ services:
           port_range_end: 50100
           use_external_ip: true
         keys:
-          undersound: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
+          ablaut: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
     ports:
       - '7880:7880'
       - '7881:7881'
@@ -72,11 +74,11 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: undersound
+      POSTGRES_USER: ablaut
       POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
-      POSTGRES_DB: undersound
+      POSTGRES_DB: ablaut
     volumes:
-      - undersound_db:/var/lib/postgresql/data
+      - ablaut_db:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
@@ -85,5 +87,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  undersound_db:
-  undersound_uploads:
+  ablaut_db:
+  ablaut_uploads:

@@ -1,18 +1,20 @@
-<p align=center><img width="250" height="250" alt="UnderSound-Logo" src="https://github.com/user-attachments/assets/10d7ce40-00fd-4b0c-9e12-8bc87b1fa5e6" /></p>
+<p align=center><img width="250" height="250" alt="ablaut logo" src="./public/ablaut-logo.png" /></p>
 
   
   
-  # UnderSound Studio
+  # ablaut
 
 Self-hosted live translation and event audio management.
 
-UnderSound Studio is a Payload CMS 3 + Next.js app for creating events, channels, listener links, speaker links, QR codes, and LiveKit audio rooms. It is built to deploy as one Docker Compose stack with PostgreSQL and LiveKit included.
+ablaut `[ˈap.laʊt]` uses the `[aʊ]` mark for a Payload CMS 3 + Next.js app that creates events, channels, listener links, speaker links, QR codes, and LiveKit audio rooms. It is built to deploy as one Docker Compose stack with PostgreSQL and LiveKit included.
+
+The name comes from **ablaut**, a change in vowel or sound form. That fits the project's goal: carrying the same message across different languages, voices, and listening contexts.
 
 Built with Cursor-assisted development.
 
 ## Purpose
 
-UnderSound Studio is intended to provide accessible live translation and event-audio tools for charity organizations, churches, community groups, and low-income associations.
+ablaut is intended to provide accessible live translation and event-audio tools for charity organizations, churches, community groups, and low-income associations.
 
 The project is not intended to be commercially exploited in ways that take advantage of those communities. Commercial use is discouraged unless it directly supports this mission, contributes improvements back, or is arranged with the project maintainer.
 
@@ -71,10 +73,10 @@ QR codes use the host you opened the app with, so LAN URLs work on phones and cl
 
 ## Mobile App
 
-Android APK downloads are published through the UnderSound Mobile GitHub Releases page:
+Android APK downloads are published through the ablaut-App GitHub Releases page:
 
 ```text
-https://github.com/silvansan/UnderSound-Mobile/releases
+https://github.com/silvansan/ablaut-App/releases
 ```
 
 ## Included Services
@@ -86,8 +88,8 @@ https://github.com/silvansan/UnderSound-Mobile/releases
 
 Persistent volumes:
 
-- `undersound_db`
-- `undersound_uploads`
+- `ablaut_db`
+- `ablaut_uploads`
 
 Do not delete these volumes during redeploys unless you intend to wipe data.
 
@@ -101,6 +103,7 @@ Do not delete these volumes during redeploys unless you intend to wipe data.
 - `docs/PORTAINER.md`
 - `PORTAINER_EASY_STACK_DEPLOYMENT.md`
 - `PORTAINER_STACK_COPY_PASTE.yml`
+- `PORTAINER_STACK_PINNED.yml`
 - `docs/SECURITY.md`
 - `docs/MIGRATION.md`
 - `docs/ANDROID_COMPATIBILITY.md`
@@ -112,10 +115,10 @@ Do not delete these volumes during redeploys unless you intend to wipe data.
 - Use HTTPS in production.
 - Point `PUBLIC_BASE_URL` and `NEXT_PUBLIC_APP_URL` to the public app URL.
 - Point `LIVEKIT_URL` to the browser-reachable LiveKit WebSocket URL.
-- Proxy `studio.example.com` to app port `3000`.
+- Proxy `ablaut.example.com` to app port `3000`.
 - Proxy `livekit.example.com` to LiveKit port `7880` with WebSocket support.
 - Forward LiveKit RTC ports `7881/tcp` and `50000-50100/udp`.
-- Back up `undersound_db` and `undersound_uploads`.
+- Back up `ablaut_db` and `ablaut_uploads`.
 
 ## License
 

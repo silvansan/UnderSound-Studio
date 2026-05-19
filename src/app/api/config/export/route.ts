@@ -2,7 +2,7 @@ import configPromise from '@payload-config'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
-import { exportUnderSoundConfig } from '@/lib/config-transfer'
+import { exportAblautConfig } from '@/lib/config-transfer'
 import { rateLimitRequest } from '@/lib/rate-limit'
 import type { User } from '@/payload-types'
 
@@ -25,13 +25,13 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url)
   const scope = url.searchParams.get('scope')
-  const config = await exportUnderSoundConfig(user as User, scope)
+  const config = await exportAblautConfig(user as User, scope)
   const body = JSON.stringify(config, null, 2)
   const fileScope = scope === 'channels' || scope === 'full' ? scope : 'events'
 
   return new Response(body, {
     headers: {
-      'Content-Disposition': `attachment; filename="undersound-${fileScope}-config.json"`,
+      'Content-Disposition': `attachment; filename="ablaut-${fileScope}-config.json"`,
       'Content-Type': 'application/json; charset=utf-8',
     },
   })

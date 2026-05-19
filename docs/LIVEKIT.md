@@ -1,6 +1,6 @@
 # LiveKit
 
-UnderSound uses LiveKit for low-latency WebRTC listener and speaker audio.
+ablaut uses LiveKit for low-latency WebRTC listener and speaker audio.
 
 LiveKit is included in the Docker Compose stack. A separate external LiveKit server is not required.
 
@@ -47,9 +47,9 @@ Channel token generation uses:
 
 1. `channel.livekitRoomName`
 2. `channel.roomName`
-3. deterministic fallback: `undersound_{eventSlug}_{channelSlug}`
+3. deterministic fallback: `ablaut_{eventSlug}_{channelSlug}`
 
-Preserve stored room names when importing old UnderSound data.
+Preserve stored room names when importing old ablaut data so existing rooms and clients continue to work.
 
 ## Token Endpoints
 

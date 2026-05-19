@@ -1,11 +1,16 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { importConfigAction, updateSiteSettingsAction } from '@/app/settings/actions'
 import { Layout } from '@/components/Layout'
+import { PanelDrawer } from '@/components/PanelDrawer'
 import { requireAppUser } from '@/lib/app-auth'
+import { pageMetadata } from '@/lib/branding'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
+
+export const metadata: Metadata = pageMetadata('Settings')
 
 export const dynamic = 'force-dynamic'
 
@@ -24,7 +29,7 @@ export default async function SettingsPage() {
   const livekitPublicUrl = settings?.livekitPublicUrl || process.env.LIVEKIT_PUBLIC_URL || process.env.LIVEKIT_URL || ''
 
   return (
-    <Layout title="Settings">
+    <Layout hideFooter hideHeader title="Settings">
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         {showPayloadAdmin && settings ? (
           <form action={updateSiteSettingsAction} className="us-panel space-y-5 px-6 py-6">
@@ -44,7 +49,7 @@ export default async function SettingsPage() {
                 Site name
                 <input
                   className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-                  defaultValue={settings.siteName ?? 'UnderSound'}
+                  defaultValue={settings.siteName ?? 'ablaut'}
                   name="siteName"
                   style={{ borderColor: 'var(--us-border)' }}
                 />
@@ -103,11 +108,11 @@ export default async function SettingsPage() {
                 Default QR style
                 <select
                   className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-                  defaultValue={settings.defaultQrStyle ?? 'undersound-default'}
+                  defaultValue={settings.defaultQrStyle ?? 'ablaut-default'}
                   name="defaultQrStyle"
                   style={{ borderColor: 'var(--us-border)' }}
                 >
-                  <option value="undersound-default">UnderSound Default</option>
+                  <option value="ablaut-default">ablaut default</option>
                   <option value="high-contrast">High Contrast</option>
                 </select>
               </label>
@@ -150,26 +155,30 @@ export default async function SettingsPage() {
           </article>
         )}
 
-        <article className="us-panel px-6 py-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-            Deployment shortcuts
-          </p>
-          <ul className="mt-4 space-y-3 text-sm leading-6" style={{ color: 'var(--us-text)' }}>
-            <li>Set app URL with `NEXT_PUBLIC_APP_URL` and `PUBLIC_BASE_URL`.</li>
-            <li>Set browser LiveKit URL with `LIVEKIT_URL` or the LiveKit public URL field.</li>
-            <li>Use `PORTAINER_EASY_STACK_DEPLOYMENT.md` for proxy and port forwarding notes.</li>
-            <li>QR codes follow the host used to open the dashboard.</li>
-          </ul>
-        </article>
+        {showPayloadAdmin ? (
+          <article className="us-panel px-6 py-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+              Deployment notes
+            </p>
+            <ul className="mt-4 space-y-3 text-sm leading-6" style={{ color: 'var(--us-text)' }}>
+              <li>Set app URL with `NEXT_PUBLIC_APP_URL` and `PUBLIC_BASE_URL`.</li>
+              <li>Set browser LiveKit URL with `LIVEKIT_URL` or the LiveKit public URL field.</li>
+              <li>QR codes follow the host used to open the dashboard.</li>
+            </ul>
+          </article>
+        ) : null}
 
         {canTransferConfig ? (
-          <article className="us-panel px-6 py-6 xl:col-span-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-              Config import / export
-            </p>
-            <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-              Export or import event/channel configuration as JSON. Speaker/listener password values are exported only as
-              stored hashes. User password hashes and secrets are never exported.
+          <div className="xl:col-span-2">
+            <PanelDrawer
+              description="Export or import events, channels, organizations, users, and assignments. Password hashes only — never plain secrets."
+              title="Config import / export"
+            >
+            <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
+              Export or import configuration as JSON. Full config includes organizations, organization memberships,
+              users, events (with organization slug), channels, and event assignments. Speaker/listener password values
+              are exported only as stored hashes. User passwords and secrets are never exported; imported users must
+              activate or reset their password.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -203,7 +212,8 @@ export default async function SettingsPage() {
                 Import config
               </button>
             </form>
-          </article>
+            </PanelDrawer>
+          </div>
         ) : null}
       </section>
     </Layout>

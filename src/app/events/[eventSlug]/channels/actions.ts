@@ -49,7 +49,7 @@ function relationshipID(value: number | string | { id?: number | string } | null
   return value?.id
 }
 
-async function canManageChannels(payload: Payload, user: User, eventID: number | string) {
+export async function canManageChannels(payload: Payload, user: User, eventID: number | string) {
   if (isSuperAdminUser(user)) {
     return true
   }
@@ -153,6 +153,7 @@ export async function createChannelAction(formData: FormData) {
       listenerTokenMode: tokenModeValue(formData),
       slug: slugify(stringValue(formData, 'slug') ?? name),
       speakerPageEnabled: booleanValue(formData, 'speakerPageEnabled'),
+      speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
       sortOrder: Number(stringValue(formData, 'sortOrder') ?? 0),
       webrtcEnabled: booleanValue(formData, 'webrtcEnabled'),
@@ -165,6 +166,7 @@ export async function createChannelAction(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath(`/events/${eventSlug}`)
   revalidatePath(`/events/${eventSlug}/channels`)
+  revalidatePath(`/events/${eventSlug}/channels/${channel.slug}`)
   redirect(`/events/${eventSlug}/channels/${channel.slug}`)
 }
 
@@ -207,6 +209,7 @@ export async function updateChannelAction(formData: FormData) {
       listenerTokenMode: tokenModeValue(formData),
       slug: slugify(stringValue(formData, 'slug') ?? name),
       speakerPageEnabled: booleanValue(formData, 'speakerPageEnabled'),
+      speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
       sortOrder: Number(stringValue(formData, 'sortOrder') ?? 0),
       webrtcEnabled: booleanValue(formData, 'webrtcEnabled'),
@@ -220,6 +223,7 @@ export async function updateChannelAction(formData: FormData) {
   revalidatePath(`/events/${eventSlug}`)
   revalidatePath(`/events/${eventSlug}/channels`)
   revalidatePath(`/events/${eventSlug}/channels/${originalSlug}`)
+  revalidatePath(`/events/${eventSlug}/channels/${channel.slug}`)
   redirect(`/events/${eventSlug}/channels/${channel.slug}`)
 }
 
@@ -306,7 +310,14 @@ export async function deleteChannelAction(formData: FormData) {
   })
 
   revalidatePath('/dashboard')
+  revalidatePath('/events')
+  revalidatePath('/channels')
   revalidatePath(`/events/${eventSlug}`)
   revalidatePath(`/events/${eventSlug}/channels`)
+
+  if (stringValue(formData, 'returnTo') === 'list') {
+    return
+  }
+
   redirect(`/events/${eventSlug}/channels`)
 }

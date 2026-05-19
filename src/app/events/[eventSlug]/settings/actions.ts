@@ -2,6 +2,7 @@
 
 import configPromise from '@payload-config'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { getPayload, type Payload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
@@ -46,7 +47,7 @@ function relationshipID(value: number | string | { id?: number | string } | null
   return value?.id
 }
 
-async function canManageAssignment(payload: Payload, user: User, eventID: number | string) {
+export async function canManageAssignment(payload: Payload, user: User, eventID: number | string) {
   if (isSuperAdminUser(user)) {
     return true
   }
@@ -170,7 +171,7 @@ export async function upsertEventAssignmentAction(formData: FormData) {
   }
 
   revalidatePath(`/events/${eventSlug}`)
-  revalidatePath(`/events/${eventSlug}/settings`)
+  redirect(`/events/${eventSlug}?settings=open`)
 }
 
 export async function deleteEventAssignmentAction(formData: FormData) {
@@ -203,5 +204,5 @@ export async function deleteEventAssignmentAction(formData: FormData) {
   })
 
   revalidatePath(`/events/${eventSlug}`)
-  revalidatePath(`/events/${eventSlug}/settings`)
+  redirect(`/events/${eventSlug}?settings=open`)
 }

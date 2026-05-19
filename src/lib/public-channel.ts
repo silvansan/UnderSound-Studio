@@ -1,6 +1,7 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
+import { getListenerAccessInfo } from '@/lib/listener-password'
 import type { Channel, Event, SiteSetting } from '@/payload-types'
 
 export type PublicChannelContext = {
@@ -12,6 +13,14 @@ export type PublicChannelContext = {
 }
 
 export type PublicChannelResponse = {
+  access: {
+    listenerPasswordConfigured: boolean
+    listenerPasswordMissing: boolean
+    listenerPasswordRequired: boolean
+    listenerTokenMode: 'password' | 'private' | 'public'
+    listenerUnavailable: boolean
+    verifyPasswordEndpoint: string
+  }
   channel: {
     description?: string | null
     enabled?: boolean | null
@@ -111,7 +120,7 @@ export async function getPublicChannelContext(
   return {
     channel,
     event,
-    roomName: channel.livekitRoomName || channel.roomName || `undersound_${event.slug}_${channel.slug}`,
+    roomName: channel.livekitRoomName || channel.roomName || `ablaut_${event.slug}_${channel.slug}`,
     settings,
     tokenExpiry,
   }
@@ -124,6 +133,7 @@ export function toPublicChannelResponse(
   const { channel, event, roomName, settings } = context
 
   return {
+    access: getListenerAccessInfo(context),
     channel: {
       description: channel.description,
       enabled: channel.enabled,
@@ -188,5 +198,17 @@ export function isSpeakerTokenAvailable(context: PublicChannelContext): boolean 
     isSpeakerPubliclyAvailable(context) &&
     context.event.speakerPasswordEnabled !== true &&
     context.channel.speakerPasswordEnabled !== true
+  )
+}
+
+/** Speaker-page inline monitor: subscribe-only, bypasses listener password/private gates. */
+export function canIssueListenerTokenForSpeakerMonitor(
+  context: PublicChannelContext,
+  hasSpeakerSession: boolean,
+): boolean {
+  return (
+    isSpeakerPubliclyAvailable(context) &&
+    context.channel.webrtcEnabled !== false &&
+    hasSpeakerSession
   )
 }

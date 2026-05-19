@@ -1,6 +1,8 @@
 # Deployment
 
-UnderSound-Studio is designed to run as a simple Docker Compose stack:
+For a local Docker build and smoke test before production, see [LOCAL_DOCKER.md](./LOCAL_DOCKER.md).
+
+ablaut is designed to run as a simple Docker Compose stack:
 
 - `app`: Next.js + Payload CMS
 - `db`: PostgreSQL
@@ -32,8 +34,8 @@ The initial super admin is created only when no users exist.
 
 These named volumes must not be deleted during updates:
 
-- `undersound_db`: PostgreSQL data
-- `undersound_uploads`: Payload media uploads
+- `ablaut_db`: PostgreSQL data
+- `ablaut_uploads`: Payload media uploads
 
 Redeploying the stack should not reset users, passwords, events, channels, assignments, uploaded logos, or settings.
 
@@ -61,7 +63,7 @@ docker compose up -d --build
 ## Database Backup
 
 ```bash
-docker compose exec db pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > undersound-backup.sql
+docker compose exec db pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > ablaut-backup.sql
 ```
 
 If your shell does not expand env vars, use the actual values from `.env`.
@@ -72,7 +74,7 @@ Stop the app, keep the database running, then restore:
 
 ```bash
 docker compose stop app
-docker compose exec -T db psql -U "$POSTGRES_USER" "$POSTGRES_DB" < undersound-backup.sql
+docker compose exec -T db psql -U "$POSTGRES_USER" "$POSTGRES_DB" < ablaut-backup.sql
 docker compose up -d app
 ```
 
@@ -80,16 +82,16 @@ Restore into a clean database unless you intentionally know how to merge data.
 
 ## Uploads Backup
 
-Back up the `undersound_uploads` Docker volume from the Docker host. One portable option:
+Back up the `ablaut_uploads` Docker volume from the Docker host. One portable option:
 
 ```bash
-docker run --rm -v undersound_uploads:/data -v "$PWD":/backup alpine tar czf /backup/undersound_uploads.tgz -C /data .
+docker run --rm -v ablaut_uploads:/data -v "$PWD":/backup alpine tar czf /backup/ablaut_uploads.tgz -C /data .
 ```
 
 Restore:
 
 ```bash
-docker run --rm -v undersound_uploads:/data -v "$PWD":/backup alpine sh -c "cd /data && tar xzf /backup/undersound_uploads.tgz"
+docker run --rm -v ablaut_uploads:/data -v "$PWD":/backup alpine sh -c "cd /data && tar xzf /backup/ablaut_uploads.tgz"
 ```
 
 ## SMTP
@@ -101,7 +103,7 @@ For local Maildev:
 ```env
 SMTP_HOST=maildev
 SMTP_PORT=1025
-SMTP_FROM=noreply@undersound.local
+SMTP_FROM=noreply@ablaut.local
 ```
 
 For production, use a real SMTP provider and a verified sending domain.
@@ -156,6 +158,6 @@ QR codes and quick links prefer the current browser request host.
 
 - Docker Desktop / local LAN: open the app from the LAN address, for example `http://192.168.1.50:3000`. QR codes will use that LAN URL so phones on the same network can open them.
 - Local-only testing: opening `http://localhost:3000` creates `localhost` links, which only work on the same computer.
-- Cloud deployment: opening the app through `https://studio.example.com` creates QR links with that public domain.
+- Cloud deployment: opening the app through `https://ablaut.example.com` creates QR links with that public domain.
 
 If a reverse proxy is used, make sure it forwards `Host` and `X-Forwarded-Proto` correctly.

@@ -7,6 +7,7 @@ import {
   generateVerificationEmailSubject,
 } from '@/lib/email'
 import { shouldUseSecureCookies } from '@/lib/cookies'
+import { getVisibleUserIDsForRequest } from '@/lib/organizations'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 
 export const Users: CollectionConfig = {
@@ -14,54 +15,67 @@ export const Users: CollectionConfig = {
   access: {
     admin: ({ req }) => isSuperAdminUser(req.user),
     create: ({ req }) => isAdminUser(req.user),
-    delete: ({ req }) => {
+    delete: async ({ req }) => {
       if (isSuperAdminUser(req.user)) {
         return true
       }
 
-      if (isAdminUser(req.user)) {
-        return {
-          role: {
-            equals: 'moderator',
-          },
-        } as Where
+      const visibleUserIDs = await getVisibleUserIDsForRequest(req)
+
+      if (visibleUserIDs === null) {
+        return true
       }
 
-      return false
+      if (visibleUserIDs.length === 0) {
+        return false
+      }
+
+      return {
+        and: [
+          {
+            id: {
+              in: visibleUserIDs,
+            },
+          },
+          {
+            role: {
+              not_equals: 'super_admin',
+            },
+          },
+        ],
+      } as Where
     },
-    read: ({ req }) => {
-      const userID = req.user?.id
-
+    read: async ({ req }) => {
       if (isSuperAdminUser(req.user)) {
         return true
       }
 
-      if (isAdminUser(req.user)) {
-        return {
-          role: {
-            equals: 'moderator',
-          },
-        } as Where
+      const visibleUserIDs = await getVisibleUserIDsForRequest(req)
+
+      if (visibleUserIDs === null) {
+        return true
       }
 
-      if (!userID) {
+      if (visibleUserIDs.length === 0) {
         return false
       }
 
       return {
         id: {
-          equals: userID,
+          in: visibleUserIDs,
         },
       } as Where
     },
-    update: ({ req }) => {
+    update: async ({ req }) => {
       const userID = req.user?.id
 
       if (isSuperAdminUser(req.user)) {
         return true
       }
 
-      if (isAdminUser(req.user)) {
+      const visibleUserIDs = await getVisibleUserIDsForRequest(req)
+
+      if (visibleUserIDs === null) {
         return {
           role: {
             not_equals: 'super_admin',
@@ -73,10 +87,27 @@ export const Users: CollectionConfig = {
         return false
       }
 
+      if (visibleUserIDs.length === 0) {
+        return {
+          id: {
+            equals: userID,
+          },
+        } as Where
+      }
+
       return {
-        id: {
-          equals: userID,
-        },
+        and: [
+          {
+            id: {
+              in: visibleUserIDs,
+            },
+          },
+          {
+            role: {
+              not_equals: 'super_admin',
+            },
+          },
+        ],
       } as Where
     },
   },

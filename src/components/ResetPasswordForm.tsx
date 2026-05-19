@@ -31,7 +31,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/users/reset-password', {
+      const response = await fetch('/api/app/reset-password', {
         body: JSON.stringify({ password, token }),
         headers: {
           'Content-Type': 'application/json',

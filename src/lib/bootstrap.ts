@@ -1,5 +1,7 @@
 import type { Payload } from 'payload'
 
+import { ensureDefaultOrganization } from '@/lib/bootstrap-organizations'
+
 export async function ensureInitialSuperAdmin(payload: Payload) {
   const existingUsers = await payload.count({
     collection: 'users',
@@ -35,4 +37,9 @@ export async function ensureInitialSuperAdmin(payload: Payload) {
   })
 
   payload.logger.info(`Created initial super admin account for ${email}.`)
+}
+
+export async function runStartupBootstrap(payload: Payload) {
+  await ensureInitialSuperAdmin(payload)
+  await ensureDefaultOrganization(payload)
 }

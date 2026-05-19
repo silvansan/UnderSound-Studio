@@ -1,25 +1,79 @@
+import configPromise from '@payload-config'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { getPayload } from 'payload'
 
-import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
 import { ChannelRow } from '@/components/ChannelRow'
+import { TruncatedList } from '@/components/TruncatedList'
+import { EventSettingsDrawer } from '@/components/EventSettingsDrawer'
 import { Layout } from '@/components/Layout'
+import { requireAppUser } from '@/lib/app-auth'
 import { getDashboardChannels, getDashboardEvent } from '@/lib/dashboard-data'
 import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
+import { isAdminUser } from '@/lib/permissions'
 import { generateQrDataUrl } from '@/lib/qrcode'
-import { deleteEventAction } from '@/app/events/actions'
 
 type PageProps = {
   params: Promise<{ eventSlug: string }>
+  searchParams: Promise<{ settings?: string }>
 }
 
 export const dynamic = 'force-dynamic'
 
-export default async function EventDetailPage({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { eventSlug } = await params
+  const event = await getDashboardEvent(eventSlug)
+
+  return {
+    title: event?.title ?? eventSlug,
+  }
+}
+
+export default async function EventDetailPage({ params, searchParams }: PageProps) {
+  const { eventSlug } = await params
+  const { settings } = await searchParams
   const [event, channels] = await Promise.all([getDashboardEvent(eventSlug), getDashboardChannels(eventSlug)])
 
   if (!event) {
+    notFound()
+  }
+
+  const user = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  const canManageAssignments = isAdminUser(user)
+  const [eventRecord, assignments] = await Promise.all([
+    payload.find({
+      collection: 'events',
+      depth: 0,
+      limit: 1,
+      overrideAccess: false,
+      pagination: false,
+      user,
+      where: {
+        slug: {
+          equals: eventSlug,
+        },
+      },
+    }),
+    payload.find({
+      collection: 'event-assignments',
+      depth: 1,
+      limit: 100,
+      overrideAccess: false,
+      pagination: false,
+      sort: 'roleForEvent',
+      user,
+      where: {
+        event: {
+          equals: event.id,
+        },
+      },
+    }),
+  ])
+  const fullEvent = eventRecord.docs[0]
+
+  if (!fullEvent) {
     notFound()
   }
 
@@ -44,112 +98,79 @@ export default async function EventDetailPage({ params }: PageProps) {
   )
 
   return (
-    <Layout title={event.title}>
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-4">
-          <article className="us-panel px-6 py-6">
-            <span className="us-chip us-chip-muted capitalize">{event.status ?? 'draft'}</span>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-              {event.title}
-            </h2>
-            <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-              {event.description || 'No event description has been added yet.'}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="us-chip us-chip-blue">
-                {event.channelCount} {event.channelCount === 1 ? 'channel' : 'channels'}
-              </span>
-              {event.location ? <span className="us-chip us-chip-muted">{event.location}</span> : null}
-              {event.publicListenerEnabled === false ? (
-                <span className="us-chip us-chip-warning">Public listeners off</span>
-              ) : null}
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary px-4 py-2.5 text-sm font-medium">
-                Add channel
-              </Link>
-              <Link href={`/events/${eventSlug}/settings`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
-                Event settings
-              </Link>
-              <Link href={`/events/${eventSlug}/edit`} className="us-button-secondary px-4 py-2.5 text-sm font-medium">
-                Edit event
-              </Link>
-            </div>
-          </article>
-
-          <article className="us-panel px-5 py-5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-                  Channels
-                </p>
-                <p className="mt-2 text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
-                  {channels.length} {channels.length === 1 ? 'channel' : 'channels'} in this event.
-                </p>
-              </div>
-              <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary px-4 py-2.5 text-sm font-medium">
-                Add channel
-              </Link>
-            </div>
-
-            {channelRows.length > 0 ? (
-              <div className="mt-5 overflow-x-auto">
-                <div className="hidden min-w-[840px] grid-cols-[1.1fr_1fr_1.2fr_1.2fr_100px] gap-3 px-2 pb-3 text-xs font-semibold uppercase tracking-[0.12em] lg:grid" style={{ color: 'var(--us-muted)' }}>
-                  <span>Channel</span>
-                  <span>Status</span>
-                  <span>Speaker</span>
-                  <span>Listener</span>
-                  <span>Manage</span>
-                </div>
-                <ul className="min-w-[840px] space-y-2">
-                  {channelRows.map((item) => (
-                    <ChannelRow
-                      description={item.channel.description}
-                      enabled={item.channel.enabled}
-                      eventSlug={eventSlug}
-                      key={item.channel.slug}
-                      languageLabel={item.channel.languageLabel || item.channel.languageCode}
-                      listenerPageEnabled={item.channel.listenerPageEnabled}
-                      listenerQrDataUrl={item.listenerQrDataUrl}
-                      listenerUrl={item.listenerUrl}
-                      name={item.channel.name}
-                      slug={item.channel.slug}
-                      speakerPageEnabled={item.channel.speakerPageEnabled}
-                      speakerQrDataUrl={item.speakerQrDataUrl}
-                      speakerUrl={item.speakerUrl}
-                    />
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="mt-5 rounded-2xl border bg-white/70 px-4 py-5" style={{ borderColor: 'var(--us-border)' }}>
-                <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-                  No channels have been added to this event yet.
-                </p>
-                <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
-                  Add first channel
-                </Link>
-              </div>
-            )}
-          </article>
+    <Layout hideFooter hideHeader title={event.title}>
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="us-chip us-chip-muted capitalize">{event.status ?? 'draft'}</span>
+          <span className="us-chip us-chip-blue">
+            {event.channelCount} {event.channelCount === 1 ? 'channel' : 'channels'}
+          </span>
+          {event.location ? <span className="us-chip us-chip-muted">{event.location}</span> : null}
+          {event.publicListenerEnabled === false ? (
+            <span className="us-chip us-chip-warning">Public listeners off</span>
+          ) : null}
+          <Link className="us-button-secondary ml-auto px-3 py-2 text-sm font-medium" href={`/channels?event=${eventSlug}`}>
+            All channels
+          </Link>
         </div>
 
-        <div className="space-y-4">
-          <article className="us-panel px-6 py-6">
+        {event.description ? (
+          <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
+            {event.description}
+          </p>
+        ) : null}
+
+        <EventSettingsDrawer
+          assignments={assignments.docs}
+          canManageAssignments={canManageAssignments}
+          defaultOpen={settings === 'open'}
+          event={fullEvent}
+        />
+
+        <article className="us-panel px-5 py-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-              Event actions
+              Channels
             </p>
-            <p className="mt-3 text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
-              Deleting an event also removes its channels and event assignments.
-            </p>
-            <form action={deleteEventAction} className="mt-4">
-              <input name="id" type="hidden" value={event.id} />
-              <ConfirmSubmitButton confirmMessage="Delete this event? This also removes its channels and event assignments.">
-                Delete event
-              </ConfirmSubmitButton>
-            </form>
-          </article>
-        </div>
+            <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary px-4 py-2.5 text-sm font-medium">
+              Add channel
+            </Link>
+          </div>
+
+          {channelRows.length > 0 ? (
+            <div className="mt-5 overflow-x-auto">
+              <TruncatedList as="ul" itemLabel="channels" listClassName="min-w-[840px] space-y-2">
+                {channelRows.map((item) => (
+                  <ChannelRow
+                    channelId={item.channel.id}
+                    description={item.channel.description}
+                    enabled={item.channel.enabled}
+                    eventSlug={eventSlug}
+                    key={item.channel.slug}
+                    languageLabel={item.channel.languageLabel || item.channel.languageCode}
+                    listenerPageEnabled={item.channel.listenerPageEnabled}
+                    listenerQrDataUrl={item.listenerQrDataUrl}
+                    listenerUrl={item.listenerUrl}
+                    name={item.channel.name}
+                    slug={item.channel.slug}
+                    speakerPageEnabled={item.channel.speakerPageEnabled}
+                    speakerQrDataUrl={item.speakerQrDataUrl}
+                    speakerUrl={item.speakerUrl}
+                  />
+                ))}
+              </TruncatedList>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border bg-white/70 px-4 py-5" style={{ borderColor: 'var(--us-border)' }}>
+              <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
+                No channels yet.
+              </p>
+              <Link href={`/events/${eventSlug}/channels/new`} className="us-button-primary mt-4 inline-flex px-4 py-2.5 text-sm font-medium">
+                Add first channel
+              </Link>
+            </div>
+          )}
+        </article>
       </section>
     </Layout>
   )

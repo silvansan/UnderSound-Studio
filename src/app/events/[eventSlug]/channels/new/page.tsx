@@ -1,9 +1,13 @@
+import configPromise from '@payload-config'
 import { notFound } from 'next/navigation'
+import { getPayload } from 'payload'
 
 import { createChannelAction } from '@/app/events/[eventSlug]/channels/actions'
 import { ChannelForm } from '@/components/ChannelForm'
 import { Layout } from '@/components/Layout'
+import { requireAppUser } from '@/lib/app-auth'
 import { getDashboardEvent } from '@/lib/dashboard-data'
+import { eventListenerPasswordConfigured } from '@/lib/listener-password'
 
 type PageProps = {
   params: Promise<{ eventSlug: string }>
@@ -19,17 +23,32 @@ export default async function NewChannelPage({ params }: PageProps) {
     notFound()
   }
 
+  const user = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  const eventRecord = (
+    await payload.find({
+      collection: 'events',
+      depth: 0,
+      limit: 1,
+      overrideAccess: false,
+      pagination: false,
+      user,
+      where: {
+        slug: {
+          equals: eventSlug,
+        },
+      },
+    })
+  ).docs[0]
+
   return (
-    <Layout title={`Add Channel to ${event.title}`}>
-      <section className="space-y-4">
-        <article className="us-panel px-6 py-6">
-          <span className="us-chip us-chip-blue">Channel setup</span>
-          <p className="mt-4 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-            Add a listener/speaker channel for this event.
-          </p>
-        </article>
-        <ChannelForm action={createChannelAction} eventSlug={eventSlug} submitLabel="Create channel" />
-      </section>
+    <Layout hideFooter hideHeader title={`Add channel · ${event.title}`}>
+      <ChannelForm
+        action={createChannelAction}
+        eventListenerPasswordConfigured={eventListenerPasswordConfigured(eventRecord)}
+        eventSlug={eventSlug}
+        submitLabel="Create channel"
+      />
     </Layout>
   )
 }

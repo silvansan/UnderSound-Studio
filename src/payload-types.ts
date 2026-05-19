@@ -69,6 +69,8 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    organizations: Organization;
+    'organization-memberships': OrganizationMembership;
     events: Event;
     channels: Channel;
     'event-assignments': EventAssignment;
@@ -82,6 +84,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    organizations: OrganizationsSelect<false> | OrganizationsSelect<true>;
+    'organization-memberships': OrganizationMembershipsSelect<false> | OrganizationMembershipsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     channels: ChannelsSelect<false> | ChannelsSelect<true>;
     'event-assignments': EventAssignmentsSelect<false> | EventAssignmentsSelect<true>;
@@ -198,6 +202,41 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organizations".
+ */
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  active?: boolean | null;
+  supportEmail?: string | null;
+  createdBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organization-memberships".
+ */
+export interface OrganizationMembership {
+  id: number;
+  organization: number | Organization;
+  user: number | User;
+  roleInOrganization: 'owner' | 'manager' | 'moderator' | 'viewer';
+  status: 'pending' | 'active' | 'rejected' | 'revoked';
+  invitedBy?: (number | null) | User;
+  requestedBy?: (number | null) | User;
+  approvedBy?: (number | null) | User;
+  invitedAt?: string | null;
+  requestedAt?: string | null;
+  approvedAt?: string | null;
+  revokedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "events".
  */
 export interface Event {
@@ -209,11 +248,19 @@ export interface Event {
   eventLogo?: (number | null) | Media;
   dateStart?: string | null;
   dateEnd?: string | null;
+  /**
+   * Owning organization for this event.
+   */
+  organization?: (number | null) | Organization;
   location?: string | null;
   defaultLanguage?: string | null;
   publicListenerEnabled?: boolean | null;
   listenerPasswordEnabled?: boolean | null;
   listenerPasswordHash?: string | null;
+  /**
+   * Enter a new event-level listener password. Only a secure hash is stored.
+   */
+  listenerPassword?: string | null;
   speakerPasswordEnabled?: boolean | null;
   /**
    * Enter a new event-level speaker password. Only a secure hash is stored.
@@ -371,6 +418,14 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
+        relationTo: 'organizations';
+        value: number | Organization;
+      } | null)
+    | ({
+        relationTo: 'organization-memberships';
+        value: number | OrganizationMembership;
+      } | null)
+    | ({
         relationTo: 'events';
         value: number | Event;
       } | null)
@@ -484,6 +539,39 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organizations_select".
+ */
+export interface OrganizationsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  description?: T;
+  active?: T;
+  supportEmail?: T;
+  createdBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organization-memberships_select".
+ */
+export interface OrganizationMembershipsSelect<T extends boolean = true> {
+  organization?: T;
+  user?: T;
+  roleInOrganization?: T;
+  status?: T;
+  invitedBy?: T;
+  requestedBy?: T;
+  approvedBy?: T;
+  invitedAt?: T;
+  requestedAt?: T;
+  approvedAt?: T;
+  revokedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "events_select".
  */
 export interface EventsSelect<T extends boolean = true> {
@@ -494,11 +582,13 @@ export interface EventsSelect<T extends boolean = true> {
   eventLogo?: T;
   dateStart?: T;
   dateEnd?: T;
+  organization?: T;
   location?: T;
   defaultLanguage?: T;
   publicListenerEnabled?: T;
   listenerPasswordEnabled?: T;
   listenerPasswordHash?: T;
+  listenerPassword?: T;
   speakerPasswordEnabled?: T;
   speakerPassword?: T;
   speakerPasswordHash?: T;
@@ -653,7 +743,7 @@ export interface SiteSetting {
   requireEmailVerification?: boolean | null;
   defaultTokenExpiry?: number | null;
   livekitPublicUrl?: string | null;
-  defaultQrStyle?: ('undersound-default' | 'high-contrast') | null;
+  defaultQrStyle?: ('ablaut-default' | 'high-contrast') | null;
   defaultThemeColors?: {
     greenDark?: string | null;
     green?: string | null;

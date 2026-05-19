@@ -5,7 +5,7 @@ This app is Portainer-friendly because it uses one Compose stack and named Docke
 ## Stack Install
 
 1. In Portainer, open **Stacks**.
-2. Create a new stack, for example `undersound-studio`.
+2. Create a new stack named `ablaut-studio`.
 3. Paste the contents of `docker-compose.yml`.
 4. Add environment variables from `.env.example` in the Portainer environment editor.
 5. Change all production secrets:
@@ -17,12 +17,14 @@ This app is Portainer-friendly because it uses one Compose stack and named Docke
    - `LIVEKIT_API_SECRET`
 6. Deploy the stack.
 
+For rollback-friendly deploys, use `PORTAINER_STACK_PINNED.yml`. It pins the app source to a Git tag such as `ablaut-v0.2.0`; rollback is changing that tag back and redeploying while keeping the same stack name and volumes.
+
 ## Required Volumes
 
 Portainer should create these named volumes:
 
-- `undersound_db`
-- `undersound_uploads`
+- `ablaut_db`
+- `ablaut_uploads`
 
 Do not delete these volumes during redeploys.
 
@@ -69,7 +71,7 @@ This lets the app update the Postgres schema when fields are added. Once formal 
 Use the Portainer console for the `db` container:
 
 ```bash
-pg_dump -U undersound undersound > /tmp/undersound-backup.sql
+pg_dump -U ablaut ablaut > /tmp/ablaut-backup.sql
 ```
 
 Then copy the file from the container or run the backup from the Docker host with `docker compose exec`.
@@ -80,14 +82,14 @@ Then copy the file from the container or run the backup from the Docker host wit
 2. Restore into the `db` container:
 
 ```bash
-psql -U undersound undersound < /tmp/undersound-backup.sql
+psql -U ablaut ablaut < /tmp/ablaut-backup.sql
 ```
 
 3. Start the `app` container again.
 
 ## Uploads
 
-Uploaded media is stored in the `undersound_uploads` volume and mounted at `/app/media`.
+Uploaded media is stored in the `ablaut_uploads` volume and mounted at `/app/media`.
 
 Back up that volume before destructive maintenance or host migration.
 
@@ -96,8 +98,8 @@ Back up that volume before destructive maintenance or host migration.
 Use a reverse proxy or tunnel in front of the app. Set both URLs to the public HTTPS origin:
 
 ```env
-NEXT_PUBLIC_APP_URL=https://studio.example.com
-PUBLIC_BASE_URL=https://studio.example.com
+NEXT_PUBLIC_APP_URL=https://ablaut.example.com
+PUBLIC_BASE_URL=https://ablaut.example.com
 ```
 
 ## LAN And QR Links

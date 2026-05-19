@@ -81,7 +81,7 @@ function parseArgs(): CliOptions {
   const input = inputIndex >= 0 ? args[inputIndex + 1] : undefined
 
   if (!input) {
-    throw new Error('Usage: payload run scripts/migrate-old-undersound.ts -- --input old-export.json [--dry-run] [--uploads-dir ./old-uploads]')
+    throw new Error('Usage: payload run scripts/migrate-legacy-export.ts -- --input old-export.json [--dry-run] [--uploads-dir ./old-uploads]')
   }
 
   return {
@@ -222,7 +222,7 @@ try {
     const oldLogoPath = await resolveOldAssetPath(oldEvent.logo, inputPath, options.uploadsDir)
 
     if (oldEvent.listenerPassword || oldEvent.listenerPasswordHash || oldEvent.speakerPassword || oldEvent.speakerPasswordHash) {
-      warnings.push(`Skipped old password fields for event "${title}". Recreate listener/speaker passwords in UnderSound v2.`)
+      warnings.push(`Skipped old password fields for event "${title}". Recreate listener/speaker passwords in ablaut.`)
     }
 
     let eventLogo: number | undefined
@@ -323,7 +323,7 @@ async function importChannel(oldChannel: OldChannel, event: ImportedEventRef) {
   const slug = slugify(stringValue(oldChannel.slug) ?? name)
 
   if (oldChannel.speakerPassword || oldChannel.speakerPasswordHash) {
-    warnings.push(`Skipped old speaker password fields for channel "${name}". Recreate speaker passwords in UnderSound v2.`)
+    warnings.push(`Skipped old speaker password fields for channel "${name}". Recreate speaker passwords in ablaut.`)
   }
 
   if (options.dryRun) {

@@ -12,9 +12,11 @@ import { Channels } from './collections/Channels'
 import { EventAssignments } from './collections/EventAssignments'
 import { Events } from './collections/Events'
 import { Media } from './collections/Media'
+import { OrganizationMemberships } from './collections/OrganizationMemberships'
+import { Organizations } from './collections/Organizations'
 import { Users } from './collections/Users'
 import { SiteSettings } from './globals/SiteSettings'
-import { ensureInitialSuperAdmin } from './lib/bootstrap'
+import { runStartupBootstrap } from './lib/bootstrap'
 import { buildEmailAdapter } from './lib/email'
 
 const filename = fileURLToPath(import.meta.url)
@@ -54,7 +56,7 @@ await removeDevMigrationMarker()
 const dbAdapter = useSqlite
   ? (await import('@payloadcms/db-sqlite')).sqliteAdapter({
       client: {
-        url: databaseUri || 'file:./data/undersound.db',
+        url: databaseUri || 'file:./data/ablaut.db',
       },
       push: pushDatabaseSchema,
     })
@@ -103,12 +105,21 @@ export default buildConfig({
     },
     user: Users.slug,
   },
-  collections: [Users, Media, Events, Channels, EventAssignments, AuditLogs],
+  collections: [
+    Users,
+    Media,
+    Organizations,
+    OrganizationMemberships,
+    Events,
+    Channels,
+    EventAssignments,
+    AuditLogs,
+  ],
   db: dbAdapter,
   editor: lexicalEditor(),
   email: await buildEmailAdapter(),
   globals: [SiteSettings],
-  onInit: ensureInitialSuperAdmin,
+  onInit: runStartupBootstrap,
   plugins: [],
   secret: requirePayloadSecret(),
   serverURL:

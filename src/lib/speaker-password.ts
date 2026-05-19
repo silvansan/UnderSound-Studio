@@ -34,7 +34,7 @@ function safeEqual(left: string, right: string): boolean {
 }
 
 export function getSpeakerSessionCookieName(eventSlug: string, channelSlug: string): string {
-  return `undersound_speaker_${digest(`${eventSlug}:${channelSlug}`).slice(0, 24)}`
+  return `ablaut_speaker_${digest(`${eventSlug}:${channelSlug}`).slice(0, 24)}`
 }
 
 export function speakerPasswordRequired(context: PublicChannelContext): boolean {

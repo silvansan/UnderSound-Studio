@@ -1,27 +1,49 @@
 import type { ReactNode } from 'react'
+import configPromise from '@payload-config'
 import Link from 'next/link'
+import { getPayload } from 'payload'
+
 import { AndroidIcon, GitHubIcon, LicenseIcon, UserCircleIcon } from './ActionIcons'
 import { Logo } from './Logo'
 import { getCurrentAppUser, requireAppUser } from '@/lib/app-auth'
+import { APP_PRONUNCIATION, APP_PRODUCT_NAME, APP_STUDIO_NAME } from '@/lib/branding'
+import { countActiveOrganizationsForUser, shouldShowMultiOrganizationNav } from '@/lib/organizations'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 
 type LayoutProps = {
   children: ReactNode
+  hideFooter?: boolean
   hideHeader?: boolean
   requireAuth?: boolean
   title?: string
 }
 
-export async function Layout({ children, hideHeader = false, requireAuth = true, title }: LayoutProps) {
+export async function Layout({
+  children,
+  hideFooter = false,
+  hideHeader = false,
+  requireAuth = true,
+  title,
+}: LayoutProps) {
   const user = requireAuth ? await requireAppUser() : await getCurrentAppUser()
   const showAppMenu = Boolean(user)
   const showPayloadAdmin = user ? isSuperAdminUser(user) : false
+  const activeOrganizationCount =
+    user && showAppMenu
+      ? await countActiveOrganizationsForUser(await getPayload({ config: configPromise }), user.id)
+      : 0
+  const showMultiOrganizationNav = shouldShowMultiOrganizationNav(user, activeOrganizationCount)
   const currentYear = new Date().getFullYear()
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', show: true },
-    { href: '/events', label: 'Events', show: true },
-    { href: '/channels', label: 'Channels', show: true },
+    { href: '/events', label: 'Events', show: showMultiOrganizationNav },
+    { href: '/channels', label: 'Channels', show: showMultiOrganizationNav },
     { href: '/users', label: 'Users', show: user ? isAdminUser(user) : false },
+    {
+      href: '/organizations',
+      label: 'Organizations',
+      show: Boolean(user && isAdminUser(user) && showMultiOrganizationNav),
+    },
     { href: '/settings', label: 'Settings', show: true },
     { href: '/admin', label: 'Payload Admin', show: showPayloadAdmin },
   ].filter((item) => item.show)
@@ -90,8 +112,8 @@ export async function Layout({ children, hideHeader = false, requireAuth = true,
             <header className="us-panel px-5 py-4 md:px-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-                    UnderSound Studio
+                  <p className="text-sm font-semibold tracking-tight" style={{ color: 'var(--us-blue-dark)' }}>
+                    {APP_STUDIO_NAME}
                   </p>
                   {title ? (
                     <h1 className="mt-1 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
@@ -109,43 +131,51 @@ export async function Layout({ children, hideHeader = false, requireAuth = true,
 
           <main className="min-w-0 flex-1">{children}</main>
 
-          <footer className="us-panel px-5 py-4 text-xs md:px-6" style={{ color: 'var(--us-muted)' }}>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <p>Copyright © {currentYear} UnderSound Studio</p>
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                <a
-                  className="inline-flex items-center gap-1.5 font-medium"
-                  href="https://github.com/silvansan/UnderSound-Studio"
-                  rel="noreferrer"
-                  style={{ color: 'var(--us-blue-dark)' }}
-                  target="_blank"
-                >
-                  <GitHubIcon />
-                  Source code
-                </a>
-                <a
-                  className="inline-flex items-center gap-1.5 font-medium"
-                  href="https://github.com/silvansan/UnderSound-Studio/blob/main/LICENSE"
-                  rel="noreferrer"
-                  style={{ color: 'var(--us-blue-dark)' }}
-                  target="_blank"
-                >
-                  <LicenseIcon />
-                  License: AGPLv3
-                </a>
-                <a
-                  className="inline-flex items-center gap-1.5 font-medium"
-                  href="https://github.com/silvansan/UnderSound-Mobile/releases"
-                  rel="noreferrer"
-                  style={{ color: 'var(--us-blue-dark)' }}
-                  target="_blank"
-                >
-                  <AndroidIcon />
-                  Download Android app
-                </a>
+          {hideFooter ? (
+            <footer className="px-1 py-2 text-center text-xs" style={{ color: 'var(--us-muted)' }}>
+              © {currentYear} {APP_STUDIO_NAME}
+            </footer>
+          ) : (
+            <footer className="us-panel px-5 py-4 text-xs md:px-6" style={{ color: 'var(--us-muted)' }}>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p>
+                  Copyright © {currentYear} {APP_STUDIO_NAME} · {APP_PRODUCT_NAME} {APP_PRONUNCIATION}
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  <a
+                    className="inline-flex items-center gap-1.5 font-medium"
+                    href="https://github.com/silvansan/ablaut-Studio"
+                    rel="noreferrer"
+                    style={{ color: 'var(--us-blue-dark)' }}
+                    target="_blank"
+                  >
+                    <GitHubIcon />
+                    Source code
+                  </a>
+                  <a
+                    className="inline-flex items-center gap-1.5 font-medium"
+                    href="https://github.com/silvansan/ablaut-Studio/blob/main/LICENSE"
+                    rel="noreferrer"
+                    style={{ color: 'var(--us-blue-dark)' }}
+                    target="_blank"
+                  >
+                    <LicenseIcon />
+                    License: AGPLv3
+                  </a>
+                  <a
+                    className="inline-flex items-center gap-1.5 font-medium"
+                    href="https://github.com/silvansan/ablaut-Studio-App/releases"
+                    rel="noreferrer"
+                    style={{ color: 'var(--us-blue-dark)' }}
+                    target="_blank"
+                  >
+                    <AndroidIcon />
+                    Download Android app
+                  </a>
+                </div>
               </div>
-            </div>
-          </footer>
+            </footer>
+          )}
         </div>
       </div>
     </div>

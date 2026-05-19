@@ -1,3 +1,5 @@
+name: ablaut-studio
+
 services:
   app:
     build:
@@ -8,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URI: postgres://${POSTGRES_USER:-undersound}:${POSTGRES_PASSWORD:-undersound}@db:5432/${POSTGRES_DB:-undersound}
+      DATABASE_URI: postgres://${POSTGRES_USER:-ablaut}:${POSTGRES_PASSWORD:-ablaut}@db:5432/${POSTGRES_DB:-ablaut}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
       LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
@@ -21,7 +23,7 @@ services:
       livekit:
         condition: service_started
     volumes:
-      - undersound_uploads:/app/media
+      - ablaut_uploads:/app/media
     restart: unless-stopped
 
   livekit:
@@ -51,13 +53,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-undersound}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-undersound}
-      POSTGRES_DB: ${POSTGRES_DB:-undersound}
+      POSTGRES_USER: ${POSTGRES_USER:-ablaut}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ablaut}
+      POSTGRES_DB: ${POSTGRES_DB:-ablaut}
     ports:
       - '5432:5432'
     volumes:
-      - undersound_db:/var/lib/postgresql/data
+      - ablaut_db:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
@@ -75,5 +77,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  undersound_db:
-  undersound_uploads:
+  ablaut_db:
+  ablaut_uploads:

@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
+
 import { changeOwnPasswordAction, logoutAction, updateProfileAction } from '@/app/profile/actions'
 import { Layout } from '@/components/Layout'
 import { requireAppUser } from '@/lib/app-auth'
+import { pageMetadata } from '@/lib/branding'
+
+export const metadata: Metadata = pageMetadata('My profile')
 
 export const dynamic = 'force-dynamic'
 
@@ -8,18 +13,14 @@ export default async function ProfilePage() {
   const user = await requireAppUser()
 
   return (
-    <Layout title="My Profile">
+    <Layout hideFooter hideHeader title="My profile">
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <article className="us-panel px-6 py-6">
-          <span className="us-chip us-chip-blue">Account</span>
-          <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-            Profile details
-          </h2>
-          <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-            Manage the basic details attached to your UnderSound account.
+          <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+            Profile
           </p>
 
-          <form action={updateProfileAction} className="mt-6 space-y-4">
+          <form action={updateProfileAction} className="mt-5 space-y-4">
             <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
               Email
               <input
@@ -64,15 +65,11 @@ export default async function ProfilePage() {
         </article>
 
         <article className="us-panel px-6 py-6">
-          <span className="us-chip us-chip-muted">Security</span>
-          <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-            Change password
-          </h2>
-          <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-            Use your current password to set a new one. Password changes apply to both the app and Payload admin.
+          <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+            Security
           </p>
 
-          <form action={changeOwnPasswordAction} className="mt-6 space-y-4">
+          <form action={changeOwnPasswordAction} className="mt-5 space-y-4">
             <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
               Current password
               <input
@@ -119,14 +116,9 @@ export default async function ProfilePage() {
 
         <article className="us-panel px-6 py-6 xl:col-span-2">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-                Session
-              </p>
-              <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-                Sign out on this device when you are done managing events.
-              </p>
-            </div>
+            <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
+              Sign out on this device when you are done managing events.
+            </p>
             <form action={logoutAction}>
               <button className="rounded-2xl border px-5 py-3 text-sm font-medium" style={{ borderColor: 'var(--us-danger)', color: 'var(--us-danger)' }} type="submit">
                 Logout

@@ -30,8 +30,10 @@ export function LoginForm() {
     setLoading(true)
 
     try {
+      const normalizedEmail = email.trim().toLowerCase()
       const response = await fetch('/api/users/login', {
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -41,7 +43,15 @@ export function LoginForm() {
       setLoading(false)
 
       if (!response.ok) {
-        setError('The email or password did not work. Check the account and try again.')
+        const failureResponse = await fetch('/api/app/login-failure', {
+          body: JSON.stringify({ email: normalizedEmail }),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          method: 'POST',
+        })
+        const failurePayload = (await failureResponse.json().catch(() => null)) as { error?: string } | null
+        setError(failurePayload?.error ?? 'The email or password did not work. Check the account and try again.')
         return
       }
 
@@ -88,7 +98,7 @@ export function LoginForm() {
       ) : null}
 
       <button disabled={loading} type="submit" className="us-button-primary w-full px-5 py-3 text-sm font-medium">
-        {loading ? 'Signing in...' : 'Sign in to UnderSound'}
+        {loading ? 'Signing in...' : 'Sign in'}
       </button>
       <div className="text-center">
         <Link href="/forgot-password" className="text-sm font-medium" style={{ color: 'var(--us-blue-dark)' }}>

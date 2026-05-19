@@ -49,3 +49,17 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# --- Internal / agent-only (do not publish) ---
+MOBILE_ABLAUT_REBRAND.md
+docs/MOBILE_AGENT_HANDOFF.md
+
+# Brand source masters (optional: commit only if you want masters public)
+/brand/
+
+# Local migration / backup exports
+legacy-export.json
+*-backup.sql
+*.sql.gz
+ablaut_uploads.tgz
+ablaut_uploads.tgz

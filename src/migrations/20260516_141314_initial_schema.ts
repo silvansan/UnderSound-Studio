@@ -8,7 +8,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   CREATE TYPE "public"."enum_events_status" AS ENUM('draft', 'active', 'archived');
   CREATE TYPE "public"."enum_channels_listener_token_mode" AS ENUM('public', 'password', 'private');
   CREATE TYPE "public"."enum_event_assignments_role_for_event" AS ENUM('admin', 'moderator', 'viewer');
-  CREATE TYPE "public"."enum_site_settings_default_qr_style" AS ENUM('undersound-default', 'high-contrast');
+  CREATE TYPE "public"."enum_site_settings_default_qr_style" AS ENUM('ablaut-default', 'high-contrast', 'undersound-default');
   CREATE TABLE "users_sessions" (
   	"_order" integer NOT NULL,
   	"_parent_id" integer NOT NULL,
@@ -206,7 +206,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   
   CREATE TABLE "site_settings" (
   	"id" serial PRIMARY KEY NOT NULL,
-  	"site_name" varchar DEFAULT 'UnderSound',
+  	"site_name" varchar DEFAULT 'ablaut',
   	"default_logo_id" integer,
   	"public_base_url" varchar,
   	"support_email" varchar,
@@ -214,7 +214,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"require_email_verification" boolean DEFAULT true,
   	"default_token_expiry" numeric DEFAULT 3600,
   	"livekit_public_url" varchar,
-  	"default_qr_style" "enum_site_settings_default_qr_style" DEFAULT 'undersound-default',
+  	"default_qr_style" "enum_site_settings_default_qr_style" DEFAULT 'ablaut-default',
   	"default_theme_colors_green_dark" varchar DEFAULT '#1a3d2e',
   	"default_theme_colors_green" varchar DEFAULT '#2d6a4f',
   	"default_theme_colors_green_light" varchar DEFAULT '#95d5b2',

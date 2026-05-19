@@ -16,7 +16,7 @@ Short route map for the app and public compatibility surfaces.
 - `/events/:eventSlug/channels/:channelSlug`: channel overview.
 - `/events/:eventSlug/channels/:channelSlug/edit`: edit channel.
 - `/channels`: global list of accessible channels.
-- `/users`: app-side user management.
+- `/users`: organization-aware user management (`?organization={slug}`).
 - `/settings`: site settings, config import/export, and admin links.
 
 ## Public Routes
@@ -35,6 +35,8 @@ These routes must stay stable for QR codes and Android app compatibility.
 
 ## App API Routes
 
+- `POST /api/app/reset-password`: app password reset; verifies invited users on success.
+- `POST /api/app/login-failure`: returns clearer login errors for inactive or unverified accounts.
 - `GET /api/health`: health check.
 - `GET /api/events/:eventSlug/channels`: public channel list for an active event.
 - `GET /api/public/listen/:eventSlug/:channelSlug`: public listener metadata.

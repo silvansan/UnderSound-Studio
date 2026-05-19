@@ -1,18 +1,22 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
 
-import { createChannelAction } from '@/app/events/[eventSlug]/channels/actions'
+import { canManageChannels, createChannelAction } from '@/app/events/[eventSlug]/channels/actions'
+import { requireAppUser } from '@/lib/app-auth'
 import { ChannelRow } from '@/components/ChannelRow'
+import { TruncatedList } from '@/components/TruncatedList'
 import { Layout } from '@/components/Layout'
+import { PanelDrawer } from '@/components/PanelDrawer'
 import { getDashboardAllChannels, getDashboardEvents } from '@/lib/dashboard-data'
 import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
+import { pageMetadata } from '@/lib/branding'
 import { generateQrDataUrl } from '@/lib/qrcode'
 
-export const dynamic = 'force-dynamic'
+export const metadata: Metadata = pageMetadata('Channels')
 
-export const metadata: Metadata = {
-  title: 'Channels',
-}
+export const dynamic = 'force-dynamic'
 
 type ChannelsPageProps = {
   searchParams?: Promise<{
@@ -26,11 +30,13 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
   const selectedEvent = params?.event ?? ''
   const searchQuery = params?.q?.trim() ?? ''
   const normalizedQuery = searchQuery.toLowerCase()
-  const [channels, events, publicBaseUrl] = await Promise.all([
+  const [channels, events, publicBaseUrl, user] = await Promise.all([
     getDashboardAllChannels(1000),
     getDashboardEvents(1000),
     getRequestBaseUrl(),
+    requireAppUser(),
   ])
+  const payload = await getPayload({ config: configPromise })
   const filteredChannels = channels.filter((channel) => {
     const matchesEvent = !selectedEvent || channel.eventSlug === selectedEvent
     const matchesQuery =
@@ -45,13 +51,15 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
     filteredChannels.map(async (channel) => {
       const listenerUrl = getListenerUrl(channel.eventSlug, channel.slug, publicBaseUrl)
       const speakerUrl = getSpeakerUrl(channel.eventSlug, channel.slug, publicBaseUrl)
-      const [listenerQrDataUrl, speakerQrDataUrl] = await Promise.all([
+      const [listenerQrDataUrl, speakerQrDataUrl, canDelete] = await Promise.all([
         generateQrDataUrl(listenerUrl),
         generateQrDataUrl(speakerUrl),
+        canManageChannels(payload, user, channel.eventID),
       ])
 
       return {
         ...channel,
+        canDelete,
         listenerQrDataUrl,
         listenerUrl,
         speakerQrDataUrl,
@@ -61,14 +69,8 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
   )
 
   return (
-    <Layout title="Channels">
+    <Layout hideFooter hideHeader title="Channels">
       <section className="space-y-4">
-        <article className="us-panel px-6 py-5">
-          <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-            All channels you can access, with quick links for speaker and listener pages.
-          </p>
-        </article>
-
         <article className="us-panel px-6 py-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
             Find channels
@@ -111,11 +113,8 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
           </form>
         </article>
 
-        <article className="us-panel px-6 py-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-            Quick add channel
-          </p>
-          <form action={createChannelAction} className="mt-4 grid gap-3 lg:grid-cols-[220px_1fr_140px_1fr_auto]">
+        <PanelDrawer description="Create a channel without opening the event page first." title="Quick add channel">
+          <form action={createChannelAction} className="grid gap-3 lg:grid-cols-[220px_1fr_140px_1fr_auto]">
             <input name="enabled" type="hidden" value="on" />
             <input name="listenerPageEnabled" type="hidden" value="on" />
             <input name="listenerTokenMode" type="hidden" value="public" />
@@ -172,7 +171,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
               </button>
             </div>
           </form>
-        </article>
+        </PanelDrawer>
 
         <article className="us-panel overflow-hidden px-4 py-4">
           <div className="hidden grid-cols-[1.1fr_1fr_1.2fr_1.2fr_100px] gap-3 px-3 pb-3 text-xs font-semibold uppercase tracking-[0.12em] lg:grid" style={{ color: 'var(--us-muted)' }}>
@@ -180,33 +179,36 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
             <span>Status</span>
             <span>Speaker</span>
             <span>Listener</span>
-            <span>Manage</span>
+            <span />
           </div>
 
-          <div className="space-y-3">
-            {channelRows.map((channel) => (
-              <ChannelRow
-                description={channel.eventTitle}
-                enabled={channel.enabled}
-                eventSlug={channel.eventSlug}
-                key={`${channel.eventSlug}-${channel.slug}`}
-                languageLabel={channel.languageLabel || channel.languageCode}
-                listenerPageEnabled={channel.listenerPageEnabled}
-                listenerQrDataUrl={channel.listenerQrDataUrl}
-                listenerUrl={channel.listenerUrl}
-                name={channel.name}
-                slug={channel.slug}
-                speakerPageEnabled={channel.speakerPageEnabled}
-                speakerQrDataUrl={channel.speakerQrDataUrl}
-                speakerUrl={channel.speakerUrl}
-              />
-            ))}
-            {channelRows.length === 0 ? (
-              <p className="px-2 py-4 text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
-                No channels are available.
-              </p>
-            ) : null}
-          </div>
+          {channelRows.length === 0 ? (
+            <p className="px-2 py-4 text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
+              No channels are available.
+            </p>
+          ) : (
+            <TruncatedList itemLabel="channels" listClassName="space-y-3">
+              {channelRows.map((channel) => (
+                <ChannelRow
+                  canDelete={channel.canDelete}
+                  channelId={channel.id}
+                  description={channel.eventTitle}
+                  enabled={channel.enabled}
+                  eventSlug={channel.eventSlug}
+                  key={`${channel.eventSlug}-${channel.slug}`}
+                  languageLabel={channel.languageLabel || channel.languageCode}
+                  listenerPageEnabled={channel.listenerPageEnabled}
+                  listenerQrDataUrl={channel.listenerQrDataUrl}
+                  listenerUrl={channel.listenerUrl}
+                  name={channel.name}
+                  slug={channel.slug}
+                  speakerPageEnabled={channel.speakerPageEnabled}
+                  speakerQrDataUrl={channel.speakerQrDataUrl}
+                  speakerUrl={channel.speakerUrl}
+                />
+              ))}
+            </TruncatedList>
+          )}
         </article>
       </section>
     </Layout>

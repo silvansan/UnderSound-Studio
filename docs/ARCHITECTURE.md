@@ -1,6 +1,6 @@
 # Architecture
 
-UnderSound-Studio is a Payload CMS 3 + Next.js app for managing event-based live translation and audio.
+ablaut is a Payload CMS 3 + Next.js app for managing event-based live translation and audio.
 
 ## Runtime Pieces
 

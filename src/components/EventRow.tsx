@@ -1,12 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+import { deleteEventAction } from '@/app/events/actions'
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
+
 type EventRowProps = {
+  canDelete?: boolean
   channelCount: number
   dateStart?: string | null
   description?: string | null
+  eventId: number
   location?: string | null
   slug: string
   status?: string | null
@@ -24,10 +28,21 @@ function formatDate(value?: string | null): string | null {
   }).format(new Date(value))
 }
 
-export function EventRow({ channelCount, dateStart, description, location, slug, status, title }: EventRowProps) {
+export function EventRow({
+  canDelete = false,
+  channelCount,
+  dateStart,
+  description,
+  eventId,
+  location,
+  slug,
+  status,
+  title,
+}: EventRowProps) {
   const formattedDate = formatDate(dateStart)
   const router = useRouter()
   const href = `/events/${slug}`
+  const deleteFormId = `delete-event-${eventId}`
 
   function openRow() {
     router.push(href)
@@ -35,7 +50,7 @@ export function EventRow({ channelCount, dateStart, description, location, slug,
 
   return (
     <li
-      className="grid cursor-pointer gap-3 rounded-2xl border bg-white/75 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[1.3fr_1fr_120px_120px] lg:items-center"
+      className="grid cursor-pointer gap-3 rounded-2xl border bg-white/75 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[1.3fr_1fr_120px_88px] lg:items-center"
       onClick={openRow}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -69,13 +84,23 @@ export function EventRow({ channelCount, dateStart, description, location, slug,
         {location || formattedDate || 'No date'}
       </div>
 
-      <Link
-        href={href}
-        className="us-button-primary justify-self-start px-4 py-2.5 text-sm font-medium lg:justify-self-end"
-        onClick={(event) => event.stopPropagation()}
-      >
-        Open event
-      </Link>
+      <div className="flex flex-wrap items-center gap-2 lg:justify-end" onClick={(event) => event.stopPropagation()}>
+        {canDelete ? (
+          <form action={deleteEventAction} id={deleteFormId}>
+            <input name="id" type="hidden" value={eventId} />
+            <input name="returnTo" type="hidden" value="list" />
+            <ConfirmSubmitButton
+              action={deleteEventAction}
+              className="rounded-2xl border px-3 py-2.5 text-sm font-medium"
+              confirmMessage="Delete this event? This also removes its channels and event assignments."
+              formId={deleteFormId}
+              title="Delete event"
+            >
+              Delete
+            </ConfirmSubmitButton>
+          </form>
+        ) : null}
+      </div>
     </li>
   )
 }

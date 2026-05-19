@@ -2,7 +2,7 @@
 
 This app sends email by acting as an SMTP client. It does not include a production mail server.
 
-For UnderSound, that is the recommended setup:
+For ablaut, that is the recommended setup:
 
 - local development: use the included mail catcher (`maildev`)
 - production: use an external SMTP provider
@@ -11,7 +11,7 @@ This document is written for people who have never set up SMTP before.
 
 ## What SMTP means here
 
-UnderSound needs SMTP for:
+ablaut needs SMTP for:
 
 - account verification emails
 - password reset emails
@@ -85,11 +85,11 @@ No matter which provider you choose, the flow is usually:
    - sometimes a tracking or verification record
 4. Wait for the provider to show the domain as verified.
 5. Create or reveal SMTP credentials.
-6. Put those credentials into UnderSound `.env`.
+6. Put those credentials into ablaut `.env`.
 7. Restart the app.
 8. Trigger a password reset or verification email and confirm delivery.
 
-## UnderSound environment variables
+## ablaut environment variables
 
 Put these in `.env`:
 
@@ -123,7 +123,7 @@ Steps:
 4. In your DNS provider, add the records Brevo gives you.
 5. Wait until Brevo shows the domain as authenticated.
 6. Create or reveal your SMTP credentials.
-7. Use these values in UnderSound:
+7. Use these values in ablaut:
 
 ```env
 SMTP_HOST=smtp-relay.brevo.com
@@ -133,7 +133,7 @@ SMTP_PASS=your-brevo-smtp-key
 SMTP_FROM=noreply@yourdomain.com
 ```
 
-8. Restart UnderSound.
+8. Restart ablaut.
 9. Test a password-reset email.
 
 ## Amazon SES step by step
@@ -155,7 +155,7 @@ Steps:
 5. Create SMTP credentials from the SES console.
 6. Copy the SMTP username and password immediately.
 7. Use the SES SMTP endpoint for your region.
-8. Set UnderSound `.env` like this:
+8. Set ablaut `.env` like this:
 
 ```env
 SMTP_HOST=email-smtp.<your-region>.amazonaws.com
@@ -165,7 +165,7 @@ SMTP_PASS=your-ses-smtp-password
 SMTP_FROM=noreply@yourdomain.com
 ```
 
-9. Restart UnderSound.
+9. Restart ablaut.
 10. Test email delivery.
 
 Important:
@@ -189,7 +189,7 @@ Steps:
 4. Wait for domain verification.
 5. Open the domain settings and locate SMTP credentials.
 6. Reset or create the SMTP password and save it.
-7. Put the values into UnderSound:
+7. Put the values into ablaut:
 
 ```env
 SMTP_HOST=smtp.mailgun.org
@@ -199,7 +199,7 @@ SMTP_PASS=your-domain-smtp-password
 SMTP_FROM=noreply@yourdomain.com
 ```
 
-8. Restart UnderSound.
+8. Restart ablaut.
 9. Test email delivery.
 
 ## Resend step by step
@@ -216,7 +216,7 @@ Typical steps:
 1. Create a Resend account.
 2. Add and verify your sending domain.
 3. Create SMTP credentials in the Resend dashboard.
-4. Put them into UnderSound `.env`.
+4. Put them into ablaut `.env`.
 5. Restart the app and test email.
 
 ## Postmark step by step
@@ -249,7 +249,7 @@ SMTP_HOST=maildev
 SMTP_PORT=1025
 SMTP_USER=
 SMTP_PASS=
-SMTP_FROM=noreply@undersound.local
+SMTP_FROM=noreply@ablaut.local
 ```
 
 Then open the Maildev UI:
@@ -270,7 +270,7 @@ If email does not arrive:
 6. Check spam/junk folders.
 7. Trigger a password reset and review app logs.
 
-## Recommendation for UnderSound deploys
+## Recommendation for ablaut deploys
 
 Use this as the default guidance:
 

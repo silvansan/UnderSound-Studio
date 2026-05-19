@@ -87,6 +87,14 @@ export const Events: CollectionConfig = {
               ],
             },
             {
+              name: 'organization',
+              type: 'relationship',
+              relationTo: 'organizations',
+              admin: {
+                description: 'Owning organization for this event.',
+              },
+            },
+            {
               name: 'location',
               type: 'text',
             },
@@ -115,6 +123,14 @@ export const Events: CollectionConfig = {
               type: 'text',
               admin: {
                 hidden: true,
+              },
+            },
+            {
+              name: 'listenerPassword',
+              type: 'text',
+              virtual: true,
+              admin: {
+                description: 'Enter a new event-level listener password. Only a secure hash is stored.',
               },
             },
             {
@@ -281,6 +297,13 @@ export const Events: CollectionConfig = {
         if (operation === 'create' && req.user?.id && !nextData.createdBy) {
           nextData.createdBy = req.user.id
         }
+
+        if (typeof nextData.listenerPassword === 'string' && nextData.listenerPassword.trim().length > 0) {
+          nextData.listenerPasswordHash = await hashSpeakerPassword(nextData.listenerPassword)
+          nextData.listenerPasswordEnabled = true
+        }
+
+        delete nextData.listenerPassword
 
         if (typeof nextData.speakerPassword === 'string' && nextData.speakerPassword.trim().length > 0) {
           nextData.speakerPasswordHash = await hashSpeakerPassword(nextData.speakerPassword)

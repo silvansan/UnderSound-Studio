@@ -1,13 +1,27 @@
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { createListenerToken, createLiveKitIdentity, getBrowserLiveKitURL } from '@/lib/livekit'
-import { getPublicChannelContext, isListenerTokenAvailable } from '@/lib/public-channel'
+import {
+  LISTENER_SESSION_HEADER,
+  getListenerSessionCookieName,
+  listenerPasswordRequired,
+  resolveListenerSessionToken,
+} from '@/lib/listener-password'
+import {
+  canIssueListenerTokenForSpeakerMonitor,
+  getPublicChannelContext,
+  isListenerPubliclyAvailable,
+  isListenerTokenAvailable,
+} from '@/lib/public-channel'
 import { rateLimitRequest } from '@/lib/rate-limit'
+import { getSpeakerSessionCookieName, verifySpeakerSessionToken } from '@/lib/speaker-password'
 
 type TokenRequestBody = {
   channelSlug?: unknown
   eventSlug?: unknown
   identity?: unknown
+  listenerSessionToken?: unknown
 }
 
 function parseString(value: unknown): string | null {
@@ -46,8 +60,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Channel not found' }, { status: 404 })
   }
 
-  if (!isListenerTokenAvailable(context)) {
-    return NextResponse.json({ error: 'Listener token is not available for this channel' }, { status: 403 })
+  const cookieStore = await cookies()
+  const listenerSessionCookie = cookieStore.get(getListenerSessionCookieName(eventSlug, channelSlug))?.value
+  const speakerSessionCookie = cookieStore.get(getSpeakerSessionCookieName(eventSlug, channelSlug))?.value
+  const hasSpeakerSession = verifySpeakerSessionToken(eventSlug, channelSlug, speakerSessionCookie)
+  const hasListenerSession = Boolean(
+    resolveListenerSessionToken(eventSlug, channelSlug, {
+      bodyToken: parseString(body.listenerSessionToken),
+      cookieToken: listenerSessionCookie,
+      headerToken: request.headers.get(LISTENER_SESSION_HEADER),
+    }),
+  )
+  const passwordRequired = listenerPasswordRequired(context)
+  const canIssueToken =
+    isListenerTokenAvailable(context) ||
+    (isListenerPubliclyAvailable(context) && passwordRequired && hasListenerSession) ||
+    canIssueListenerTokenForSpeakerMonitor(context, hasSpeakerSession)
+
+  if (!canIssueToken) {
+    const error = passwordRequired
+      ? 'Listener password is required. Verify the password before requesting a token.'
+      : context.channel.listenerTokenMode === 'private'
+        ? 'This listener channel is private.'
+        : 'Listener token is not available for this channel.'
+
+    return NextResponse.json({ error }, { status: 403 })
   }
 
   try {

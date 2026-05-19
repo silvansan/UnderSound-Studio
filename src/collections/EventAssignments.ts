@@ -1,6 +1,7 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 
 import { canAssignModerators } from '@/access/canAssignModerators'
+import { userHasActiveOrganizationMembership } from '@/lib/organizations'
 import { getManageableEventIDs, getViewableEventIDs, isAdminUser, isModeratorUser, isSuperAdminUser } from '@/lib/permissions'
 
 type EventRole = 'admin' | 'moderator' | 'viewer'
@@ -248,7 +249,7 @@ export const EventAssignments: CollectionConfig = {
       },
     ],
     beforeChange: [
-      ({ data, operation, originalDoc }) => {
+      async ({ data, operation, originalDoc, req }) => {
         const nextData = { ...data }
         const nextRole = (nextData.roleForEvent ?? originalDoc?.roleForEvent) as EventRole | undefined
 
@@ -263,6 +264,28 @@ export const EventAssignments: CollectionConfig = {
           nextData.permissions === undefined
         ) {
           nextData.permissions = getDefaultPermissionsForRole(nextData.roleForEvent as EventRole)
+        }
+
+        if (!isSuperAdminUser(req.user)) {
+          const eventID = normalizeRelationshipID(nextData.event ?? originalDoc?.event)
+          const assignedUserID = normalizeRelationshipID(nextData.user ?? originalDoc?.user)
+
+          if (eventID && assignedUserID) {
+            const event = await req.payload.findByID({
+              collection: 'events',
+              id: eventID,
+              overrideAccess: true,
+              req,
+            })
+            const organizationID = normalizeRelationshipID(event.organization)
+
+            if (
+              organizationID &&
+              !(await userHasActiveOrganizationMembership(req, assignedUserID, organizationID))
+            ) {
+              throw new Error('Event assignments are limited to active members of the event organization.')
+            }
+          }
         }
 
         return nextData

@@ -2316,7 +2316,7 @@
           "type": "varchar",
           "primaryKey": false,
           "notNull": false,
-          "default": "'UnderSound'"
+          "default": "'ablaut'"
         },
         "default_logo_id": {
           "name": "default_logo_id",
@@ -2369,7 +2369,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": "'undersound-default'"
+          "default": "'ablaut-default'"
         },
         "default_theme_colors_green_dark": {
           "name": "default_theme_colors_green_dark",
@@ -2538,8 +2538,9 @@
       "name": "enum_site_settings_default_qr_style",
       "schema": "public",
       "values": [
-        "undersound-default",
-        "high-contrast"
+        "ablaut-default",
+        "high-contrast",
+        "undersound-default"
       ]
     }
   },

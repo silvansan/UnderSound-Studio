@@ -1,9 +1,11 @@
+import { APP_STUDIO_NAME } from '@/lib/branding'
+
 export function PayloadAdminLogo() {
   return (
-    <div className="undersound-admin-logo">
+    <div className="ablaut-admin-logo">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img alt="UnderSound logo" src="/undersound-logo.png" />
-      <span>UnderSound</span>
+      <img alt="ablaut logo" src="/ablaut-icon.png" />
+      <span>{APP_STUDIO_NAME}</span>
     </div>
   )
 }

@@ -3,12 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
-import {
-  generateInvitedUserActivationEmailHTML,
-  generateInvitedUserActivationEmailSubject,
-  getBaseUrl,
-  joinUrl,
-} from '@/lib/email'
+import { sendUserActivationInviteEmail } from '@/lib/user-management'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 import { rateLimitRequest } from '@/lib/rate-limit'
 
@@ -96,29 +91,11 @@ export async function POST(request: Request) {
       password: temporaryPassword,
       role,
     },
-    disableVerificationEmail: false,
+    disableVerificationEmail: true,
     overrideAccess: true,
   })
 
-  const resetToken = await payload.forgotPassword({
-    collection: 'users',
-    data: {
-      email,
-    },
-    disableEmail: true,
-    overrideAccess: true,
-  })
-
-  const activationUrl = joinUrl(getBaseUrl(), `/reset-password/${resetToken ?? ''}`)
-
-  await payload.sendEmail({
-    html: generateInvitedUserActivationEmailHTML({
-      activationUrl,
-      email,
-    }),
-    subject: generateInvitedUserActivationEmailSubject(),
-    to: email,
-  })
+  await sendUserActivationInviteEmail(payload, email)
 
   return NextResponse.json(
     {

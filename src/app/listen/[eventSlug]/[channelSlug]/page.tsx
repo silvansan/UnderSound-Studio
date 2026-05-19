@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 
 import { Layout } from '@/components/Layout'
 import { ListenerConnectPanel } from '@/components/ListenerConnectPanel'
+import { getListenerSessionCookieName, verifyListenerSessionToken } from '@/lib/listener-password'
+import { formatEventChannelTitle } from '@/lib/branding'
 import { getPublicChannelContext, isListenerPubliclyAvailable } from '@/lib/public-channel'
 
 type PageProps = {
@@ -15,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const channelName = context?.channel.name ?? channelSlug
 
   return {
-    title: `Listen | ${eventTitle} / ${channelName}`,
+    title: formatEventChannelTitle(eventTitle, channelName),
   }
 }
 
@@ -26,6 +29,9 @@ export default async function ListenPage({ params }: PageProps) {
   const eventTitle = context?.event.title ?? eventSlug
   const channelName = context?.channel.name ?? channelSlug
   const languageLabel = context?.channel.languageLabel ?? context?.channel.languageCode ?? context?.event.defaultLanguage
+  const cookieStore = await cookies()
+  const listenerSession = cookieStore.get(getListenerSessionCookieName(eventSlug, channelSlug))?.value
+  const hasListenerSession = verifyListenerSessionToken(eventSlug, channelSlug, listenerSession)
 
   return (
     <Layout hideHeader requireAuth={false} title="Listen">
@@ -57,6 +63,7 @@ export default async function ListenPage({ params }: PageProps) {
                 channelSlug={channelSlug}
                 eventSlug={eventSlug}
                 fallbackUrl={context?.channel.icecastFallbackUrl}
+                hasListenerSession={hasListenerSession}
                 listenerPasswordEnabled={context?.event.listenerPasswordEnabled}
                 listenerTokenMode={context?.channel.listenerTokenMode}
                 webrtcEnabled={context?.channel.webrtcEnabled}
