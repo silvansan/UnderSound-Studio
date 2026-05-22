@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation'
 import { getPayload, type Payload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
+import { getManageableOrganizationIDs } from '@/lib/organizations'
+import { revalidateOrganizationPaths } from '@/lib/revalidate-organization-paths'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 import type { Event, User } from '@/payload-types'
 
@@ -95,16 +97,50 @@ export async function canDeleteEvent(
   return assignments.docs.length > 0
 }
 
+function numericValue(formData: FormData, key: string): number | undefined {
+  const value = stringValue(formData, key)
+  const parsed = value ? Number(value) : NaN
+
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+async function assertCanCreateEventInOrganization(
+  payload: Payload,
+  user: User,
+  organizationId: number,
+) {
+  if (!isAdminUser(user)) {
+    throw new Error('Only admins can create events in an organization.')
+  }
+
+  if (isSuperAdminUser(user)) {
+    return
+  }
+
+  const manageableOrganizationIDs = await getManageableOrganizationIDs({ payload, user } as never)
+
+  if (manageableOrganizationIDs !== null && !manageableOrganizationIDs.includes(organizationId)) {
+    throw new Error('You do not have permission to create events in this organization.')
+  }
+}
+
 export async function createEventAction(formData: FormData) {
   const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
   const title = stringValue(formData, 'title')
+  const organizationId = numericValue(formData, 'organizationId')
 
   if (!title) {
     throw new Error('Event title is required.')
   }
 
-  const event = await payload.create({
+  if (!organizationId) {
+    throw new Error('Organization is required.')
+  }
+
+  await assertCanCreateEventInOrganization(payload, user, organizationId)
+
+  await payload.create({
     collection: 'events',
     data: {
       dateEnd: dateValue(formData, 'dateEnd'),
@@ -114,7 +150,9 @@ export async function createEventAction(formData: FormData) {
       location: stringValue(formData, 'location'),
       listenerPassword: stringValue(formData, 'listenerPassword'),
       listenerPasswordEnabled: booleanValue(formData, 'listenerPasswordEnabled'),
+      organization: organizationId,
       publicListenerEnabled: booleanValue(formData, 'publicListenerEnabled'),
+      unifiedListenerQrEnabled: booleanValue(formData, 'unifiedListenerQrEnabled'),
       slug: slugify(stringValue(formData, 'slug') ?? title),
       speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
@@ -127,7 +165,16 @@ export async function createEventAction(formData: FormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/events')
-  redirect(`/events/${event.slug}`)
+  revalidateOrganizationPaths()
+
+  const organization = await payload.findByID({
+    id: organizationId,
+    collection: 'organizations',
+    depth: 0,
+    overrideAccess: true,
+  })
+  revalidateOrganizationPaths(organization.slug)
+  redirect(`/organizations/${organization.slug}?tab=events`)
 }
 
 export async function updateEventAction(formData: FormData) {
@@ -136,10 +183,17 @@ export async function updateEventAction(formData: FormData) {
   const id = stringValue(formData, 'id')
   const originalSlug = stringValue(formData, 'originalSlug')
   const title = stringValue(formData, 'title')
+  const organizationId = numericValue(formData, 'organizationId')
 
   if (!id || !originalSlug || !title) {
     throw new Error('Event ID, original slug, and title are required.')
   }
+
+  if (!organizationId) {
+    throw new Error('Organization is required.')
+  }
+
+  await assertCanCreateEventInOrganization(payload, user, organizationId)
 
   const event = await payload.update({
     id,
@@ -152,7 +206,9 @@ export async function updateEventAction(formData: FormData) {
       location: stringValue(formData, 'location'),
       listenerPassword: stringValue(formData, 'listenerPassword'),
       listenerPasswordEnabled: booleanValue(formData, 'listenerPasswordEnabled'),
+      organization: organizationId,
       publicListenerEnabled: booleanValue(formData, 'publicListenerEnabled'),
+      unifiedListenerQrEnabled: booleanValue(formData, 'unifiedListenerQrEnabled'),
       slug: slugify(stringValue(formData, 'slug') ?? title),
       speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
@@ -166,6 +222,16 @@ export async function updateEventAction(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath('/events')
   revalidatePath(`/events/${originalSlug}`)
+  revalidatePath(`/listen/${event.slug}`)
+  revalidateOrganizationPaths()
+
+  const organization = await payload.findByID({
+    id: organizationId,
+    collection: 'organizations',
+    depth: 0,
+    overrideAccess: true,
+  })
+  revalidateOrganizationPaths(organization.slug)
   redirect(`/events/${event.slug}?settings=open`)
 }
 

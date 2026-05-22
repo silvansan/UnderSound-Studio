@@ -7,6 +7,8 @@ import { DownloadIcon, OpenLinkIcon, QRCodeIcon } from '@/components/ActionIcons
 import { ModalPortal } from '@/components/ModalPortal'
 
 type QRPopupProps = {
+  appearance?: 'cluster-inner' | 'default'
+  clusterVariant?: 'listener' | 'speaker'
   fileName?: string
   label: string
   qrDataUrl: string
@@ -14,7 +16,15 @@ type QRPopupProps = {
   url: string
 }
 
-export function QRPopup({ fileName, label, qrDataUrl, triggerLabel = `Show ${label} QR`, url }: QRPopupProps) {
+export function QRPopup({
+  appearance = 'default',
+  clusterVariant = 'listener',
+  fileName,
+  label,
+  qrDataUrl,
+  triggerLabel = `Show ${label} QR`,
+  url,
+}: QRPopupProps) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [open, setOpen] = useState(false)
 
@@ -31,12 +41,20 @@ export function QRPopup({ fileName, label, qrDataUrl, triggerLabel = `Show ${lab
     <>
       <button
         aria-label={triggerLabel}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white/80 transition hover:-translate-y-0.5 hover:shadow-md"
+        className={
+          appearance === 'cluster-inner'
+            ? `us-route-cluster-inner-btn us-route-cluster-inner-btn-${clusterVariant}`
+            : 'inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white/80 transition hover:-translate-y-0.5 hover:shadow-md'
+        }
         onClick={(event) => {
           event.stopPropagation()
           setOpen(true)
         }}
-        style={{ borderColor: 'var(--us-border)', color: 'var(--us-blue-dark)' }}
+        style={
+          appearance === 'cluster-inner'
+            ? undefined
+            : { borderColor: 'var(--us-border)', color: 'var(--us-blue-dark)' }
+        }
         title={triggerLabel}
         type="button"
       >

@@ -1,16 +1,18 @@
-# ablaut - Portainer copy/paste stack
+# ablaut - Portainer stack (safe redeploy)
 #
 # How to use:
-# 1. In Portainer, create a new stack named "ablaut-studio".
-# 2. Paste this whole file into the Web editor.
-# 3. Replace every CHANGE_ME / example domain before deploying.
-# 4. Keep the named volumes when updating the stack.
+# 1. In Portainer: Stacks -> your stack -> Editor (or Add stack).
+# 2. Paste this file.
+# 3. Set environment variables in Portainer (see .env.example / PORTAINER_EASY_STACK_DEPLOYMENT.md).
+# 4. Redeploy — keep volumes ablaut_db and ablaut_uploads (do NOT delete them).
 #
-# Proxy notes:
-# - Proxy https://ablaut.example.com -> app:3000 with WebSocket support.
-# - Proxy https://livekit.example.com -> livekit:7880 with WebSocket support.
-# - Also forward 7881/tcp and 50000-50100/udp to the Docker host for LiveKit RTC media.
-# - Do not expose Postgres 5432 publicly.
+# Safe production defaults (set in Portainer env):
+#   PAYLOAD_DB_PUSH=false
+#   PAYLOAD_RUN_MIGRATIONS=true
+#   PAYLOAD_WAIT_FOR_DB=true
+#
+# LL-HLS compatibility fallback is enabled by default (redis + livekit-egress included below).
+# Disable with FEATURE_HLS_EGRESS=false in Portainer env if you do not want egress.
 
 name: ablaut-studio
 
@@ -21,24 +23,33 @@ services:
       dockerfile: Dockerfile
     environment:
       NODE_ENV: production
-      PAYLOAD_SECRET: CHANGE_ME_LONG_RANDOM_PAYLOAD_SECRET_MIN_32_CHARS
-      DATABASE_URI: postgres://ablaut:CHANGE_ME_DB_PASSWORD@db:5432/ablaut
-      POSTGRES_USER: ablaut
-      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
-      POSTGRES_DB: ablaut
-      PAYLOAD_DB_PUSH: 'true'
-      NEXT_PUBLIC_APP_URL: https://ablaut.example.com
-      PUBLIC_BASE_URL: https://ablaut.example.com
-      LIVEKIT_API_KEY: ablaut
-      LIVEKIT_API_SECRET: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
-      LIVEKIT_URL: wss://livekit.example.com
-      SMTP_HOST: smtp.example.com
-      SMTP_PORT: '587'
-      SMTP_USER: CHANGE_ME_SMTP_USER
-      SMTP_PASS: CHANGE_ME_SMTP_PASSWORD
-      SMTP_FROM: noreply@example.com
-      INITIAL_SUPER_ADMIN_EMAIL: admin@example.com
-      INITIAL_SUPER_ADMIN_PASSWORD: CHANGE_ME_FIRST_ADMIN_PASSWORD
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET}
+      DATABASE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PAYLOAD_DB_PUSH: ${PAYLOAD_DB_PUSH:-false}
+      PAYLOAD_RUN_MIGRATIONS: ${PAYLOAD_RUN_MIGRATIONS:-true}
+      PAYLOAD_WAIT_FOR_DB: ${PAYLOAD_WAIT_FOR_DB:-true}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
+      LIVEKIT_URL: ${LIVEKIT_URL}
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-}
+      LIVEKIT_USE_EXTERNAL_IP: ${LIVEKIT_USE_EXTERNAL_IP:-false}
+      FEATURE_HLS_EGRESS: ${FEATURE_HLS_EGRESS:-true}
+      LIVEKIT_EGRESS_ENABLED: ${LIVEKIT_EGRESS_ENABLED:-true}
+      HLS_PUBLIC_BASE_URL: ${HLS_PUBLIC_BASE_URL:-}
+      HLS_SEGMENTS_DIR: ${HLS_SEGMENTS_DIR:-/app/hls-segments}
+      HLS_EGRESS_OUTPUT_DIR: ${HLS_EGRESS_OUTPUT_DIR:-/out}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      INITIAL_SUPER_ADMIN_EMAIL: ${INITIAL_SUPER_ADMIN_EMAIL:-}
+      INITIAL_SUPER_ADMIN_PASSWORD: ${INITIAL_SUPER_ADMIN_PASSWORD:-}
     ports:
       - '3000:3000'
     depends_on:
@@ -46,12 +57,26 @@ services:
         condition: service_healthy
       livekit:
         condition: service_started
+      redis:
+        condition: service_started
+      livekit-egress:
+        condition: service_started
     volumes:
       - ablaut_uploads:/app/media
+      - ablaut_hls_segments:/app/hls-segments
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/health?deep=1').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   livekit:
-    image: livekit/livekit-server:v1.9.1
+    image: livekit/livekit-server:v1.12.0
+    depends_on:
+      redis:
+        condition: service_started
     command:
       - --config-body
       - |
@@ -62,9 +87,14 @@ services:
           tcp_port: 7881
           port_range_start: 50000
           port_range_end: 50100
-          use_external_ip: true
+          use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-false}
+        redis:
+          address: redis:6379
         keys:
-          ablaut: CHANGE_ME_LONG_RANDOM_LIVEKIT_SECRET
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+    environment:
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET}
     ports:
       - '7880:7880'
       - '7881:7881'
@@ -74,9 +104,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ablaut
-      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
-      POSTGRES_DB: ablaut
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ablaut_db:/var/lib/postgresql/data
     healthcheck:
@@ -86,6 +116,48 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  hls-volume-init:
+    image: busybox:1.36
+    user: '0:0'
+    volumes:
+      - ablaut_hls_segments:/out
+    command: ['sh', '-c', 'chmod 1777 /out']
+    restart: 'no'
+
+  livekit-egress:
+    image: livekit/egress:v1.12.0
+    cap_add:
+      - SYS_ADMIN
+    depends_on:
+      hls-volume-init:
+        condition: service_completed_successfully
+      livekit:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      EGRESS_CONFIG_BODY: |
+        log_level: info
+        api_key: ${LIVEKIT_API_KEY}
+        api_secret: ${LIVEKIT_API_SECRET}
+        ws_url: ws://livekit:7880
+        insecure: true
+        health_port: 9090
+        template_base: https://livekit.io/egress-template
+        redis:
+          address: redis:6379
+        file_output:
+          local:
+            directory: /out
+    volumes:
+      - ablaut_hls_segments:/out
+    restart: unless-stopped
+
 volumes:
   ablaut_db:
   ablaut_uploads:
+  ablaut_hls_segments:

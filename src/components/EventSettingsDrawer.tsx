@@ -9,6 +9,7 @@ type EventSettingsDrawerProps = {
   canManageAssignments: boolean
   defaultOpen?: boolean
   event: Event
+  organizations?: Array<{ id: number; name: string; slug?: string }>
 }
 
 export function EventSettingsDrawer({
@@ -16,6 +17,7 @@ export function EventSettingsDrawer({
   canManageAssignments,
   defaultOpen = false,
   event,
+  organizations = [],
 }: EventSettingsDrawerProps) {
   return (
     <PanelDrawer
@@ -24,7 +26,13 @@ export function EventSettingsDrawer({
       title="Settings"
     >
       <div className="space-y-6">
-        <EventForm action={updateEventAction} event={event} submitLabel="Save event" variant="drawer" />
+        <EventForm
+          action={updateEventAction}
+          event={event}
+          organizations={organizations}
+          submitLabel="Save event"
+          variant="drawer"
+        />
         <EventAssignmentsSection assignments={assignments} canManageAssignments={canManageAssignments} />
       </div>
     </PanelDrawer>

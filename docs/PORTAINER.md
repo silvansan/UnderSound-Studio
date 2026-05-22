@@ -50,13 +50,15 @@ LIVEKIT_URL=wss://livekit.example.com
 
 ## Database Schema
 
-For this early build, keep:
+Use migration-first production settings:
 
 ```env
-PAYLOAD_DB_PUSH=true
+PAYLOAD_DB_PUSH=false
+PAYLOAD_RUN_MIGRATIONS=true
+PAYLOAD_WAIT_FOR_DB=true
 ```
 
-This lets the app update the Postgres schema when fields are added. Once formal migration files exist, switch this to `false` and run migrations during updates.
+Production Docker runs registered Payload migrations on startup. Schema push is for local development only.
 
 ## Safe Update
 

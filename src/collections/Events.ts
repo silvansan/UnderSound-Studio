@@ -114,6 +114,14 @@ export const Events: CollectionConfig = {
               defaultValue: true,
             },
             {
+              name: 'unifiedListenerQrEnabled',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: {
+                description: 'Allow one listener QR for the whole event (channel picker).',
+              },
+            },
+            {
               name: 'listenerPasswordEnabled',
               type: 'checkbox',
               defaultValue: false,
@@ -160,12 +168,7 @@ export const Events: CollectionConfig = {
               hasMany: true,
               admin: {
                 readOnly: true,
-                description: 'Derived from event assignments.',
-              },
-              filterOptions: {
-                role: {
-                  in: ['admin', 'super_admin'],
-                },
+                description: 'Users with event assignment role Admin (derived automatically).',
               },
             },
             {
@@ -175,12 +178,7 @@ export const Events: CollectionConfig = {
               hasMany: true,
               admin: {
                 readOnly: true,
-                description: 'Derived from event assignments.',
-              },
-              filterOptions: {
-                role: {
-                  equals: 'moderator',
-                },
+                description: 'Users with event assignment role Moderator (derived automatically).',
               },
             },
           ],

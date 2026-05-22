@@ -2,8 +2,10 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 import { Layout } from '@/components/Layout'
+import { ListGroupRow } from '@/components/ListGroupRow'
 import { requireAppUser } from '@/lib/app-auth'
 import { getDashboardSummary } from '@/lib/dashboard-data'
+import { assignGroupTints } from '@/lib/list-group-tints'
 import { isAdminUser } from '@/lib/permissions'
 import { pageMetadata } from '@/lib/branding'
 
@@ -14,18 +16,27 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
   const [summary, user] = await Promise.all([getDashboardSummary(), requireAppUser()])
   const canCreateEvents = isAdminUser(user)
-  const recentItems = [
-    ...summary.recentChannels.slice(0, 4).map((channel) => ({
-      href: `/events/${channel.eventSlug}/channels/${channel.slug}`,
-      key: `channel-${channel.eventSlug}-${channel.slug}`,
-      label: `${channel.eventTitle} · ${channel.name}`,
-    })),
-    ...summary.recentEvents.slice(0, 4).map((event) => ({
-      href: `/events/${event.slug}`,
-      key: `event-${event.slug}`,
-      label: event.title,
-    })),
+  const channelItems = summary.recentChannels.slice(0, 4).map((channel) => ({
+    eventSlug: channel.eventSlug,
+    groupKey: `channel:${channel.eventSlug}`,
+    href: `/events/${channel.eventSlug}/channels/${channel.slug}`,
+    key: `channel-${channel.eventSlug}-${channel.slug}`,
+    kind: 'channel' as const,
+    label: `${channel.eventTitle} · ${channel.name}`,
+  }))
+  const eventItems = summary.recentEvents.slice(0, 4).map((event) => ({
+    eventSlug: event.slug,
+    groupKey: `event:${event.slug}`,
+    href: `/events/${event.slug}`,
+    key: `event-${event.slug}`,
+    kind: 'event' as const,
+    label: event.title,
+  }))
+  const sortedRecentItems = [
+    ...channelItems.sort((a, b) => a.eventSlug.localeCompare(b.eventSlug) || a.label.localeCompare(b.label)),
+    ...eventItems.sort((a, b) => a.label.localeCompare(b.label)),
   ].slice(0, 6)
+  const recentItems = assignGroupTints(sortedRecentItems, (item) => item.groupKey)
 
   return (
     <Layout hideFooter hideHeader title="Dashboard">
@@ -66,9 +77,15 @@ export default async function DashboardPage() {
             <ul className="mt-4 space-y-2">
               {recentItems.map((item) => (
                 <li key={item.key}>
-                  <Link className="text-sm font-medium hover:underline" href={item.href} style={{ color: 'var(--us-green-dark)' }}>
+                  <ListGroupRow
+                    as={Link}
+                    className="block rounded-2xl border px-4 py-3 text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-md"
+                    href={item.href}
+                    rowTint={item.rowTint}
+                    style={{ borderColor: 'var(--us-border)', color: 'var(--us-green-dark)' }}
+                  >
                     {item.label}
-                  </Link>
+                  </ListGroupRow>
                 </li>
               ))}
             </ul>

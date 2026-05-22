@@ -1,14 +1,13 @@
 import { cookies } from 'next/headers'
 import type { Metadata } from 'next'
 
-import { IconActionLink } from '@/components/ActionIcons'
 import { Layout } from '@/components/Layout'
-import { QRPopup } from '@/components/QRPopup'
+import { RouteActionCluster } from '@/components/RouteActionCluster'
 import { SpeakerAccessPanel } from '@/components/SpeakerAccessPanel'
-import { SpeakerListenerMonitor } from '@/components/SpeakerListenerMonitor'
+import { SpeakerChannelMonitor } from '@/components/SpeakerChannelMonitor'
 import { formatEventChannelTitle } from '@/lib/branding'
 import { getListenerUrl, getRequestBaseUrl } from '@/lib/links'
-import { getPublicChannelContext, isSpeakerPubliclyAvailable } from '@/lib/public-channel'
+import { getMonitorableChannelsForEvent, getPublicChannelContext, isSpeakerPubliclyAvailable } from '@/lib/public-channel'
 import { generateQrDataUrl } from '@/lib/qrcode'
 import {
   getSpeakerSessionCookieName,
@@ -45,6 +44,7 @@ export default async function SpeakPage({ params }: PageProps) {
   const publicBaseUrl = await getRequestBaseUrl()
   const listenerUrl = getListenerUrl(eventSlug, channelSlug, publicBaseUrl)
   const listenerQrDataUrl = await generateQrDataUrl(listenerUrl)
+  const monitorChannels = context ? await getMonitorableChannelsForEvent(eventSlug, channelSlug) : []
 
   return (
     <Layout hideHeader requireAuth={false} title="Speak">
@@ -70,24 +70,34 @@ export default async function SpeakPage({ params }: PageProps) {
                 <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
                   Listener check
                 </p>
-                <SpeakerListenerMonitor
-                  channelName={channelName}
-                  channelSlug={channelSlug}
-                  eventSlug={eventSlug}
-                  fallbackUrl={context.channel.icecastFallbackUrl}
-                  webrtcEnabled={context.channel.webrtcEnabled}
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <QRPopup
-                    fileName={`${eventSlug}-${channelSlug}-listener.png`}
-                    label="Listener"
-                    qrDataUrl={listenerQrDataUrl}
-                    triggerLabel="Listener QR"
-                    url={listenerUrl}
+                {hasSpeakerSession ? (
+                  <SpeakerChannelMonitor
+                    currentChannel={{
+                      languageLabel: context.channel.languageLabel,
+                      name: channelName,
+                      slug: channelSlug,
+                      webrtcEnabled: context.channel.webrtcEnabled,
+                    }}
+                    eventSlug={eventSlug}
+                    fallbackUrl={context.channel.icecastFallbackUrl}
+                    monitorChannels={monitorChannels}
+                    publishChannelSlug={channelSlug}
                   />
-                  <IconActionLink href={listenerUrl} icon="open" target="_blank">
-                    Open listener page
-                  </IconActionLink>
+                ) : (
+                  <p className="rounded-2xl border bg-white/70 px-4 py-4 text-sm leading-6" style={{ borderColor: 'var(--us-border)', color: 'var(--us-muted)' }}>
+                    Unlock speaker controls to monitor listener audio on this channel or others in the event.
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <RouteActionCluster
+                    openLabel="Open listener page"
+                    qrDataUrl={listenerQrDataUrl}
+                    qrFileName={`${eventSlug}-${channelSlug}-listener.png`}
+                    qrLabel="Listener"
+                    qrTriggerLabel="Listener QR"
+                    url={listenerUrl}
+                    variant="listener"
+                  />
                 </div>
               </div>
             ) : null}

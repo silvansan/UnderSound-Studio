@@ -41,13 +41,17 @@ Redeploying the stack should not reset users, passwords, events, channels, assig
 
 ## Database Schema
 
-Until formal migrations are added, the stack uses:
+Production deployments should use migration-first settings:
 
 ```env
-PAYLOAD_DB_PUSH=true
+PAYLOAD_DB_PUSH=false
+PAYLOAD_RUN_MIGRATIONS=true
+PAYLOAD_WAIT_FOR_DB=true
 ```
 
-This lets Payload/Drizzle keep the database schema in sync during early deployments. After migration files are introduced, set `PAYLOAD_DB_PUSH=false` and deploy with migrations instead.
+Payload runs registered migrations automatically on startup in production Docker. Schema push (`PAYLOAD_DB_PUSH=true`) is for local development only.
+
+Every schema change must ship with a migration file and an entry in `src/migrations/index.ts`. The build verifies this via `npm run verify:migrations`.
 
 ## Update Existing Deployment
 

@@ -2,7 +2,7 @@ import { getPayload } from 'payload'
 
 process.env.PAYLOAD_MIGRATING = 'true'
 
-const email = process.env.INITIAL_SUPER_ADMIN_EMAIL?.trim()
+const email = process.env.INITIAL_SUPER_ADMIN_EMAIL?.trim().toLowerCase()
 const password = process.env.INITIAL_SUPER_ADMIN_PASSWORD?.trim()
 
 if (!email || !password) {

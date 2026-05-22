@@ -31,8 +31,23 @@ export async function verifyContextListenerPassword(
   return verifySpeakerPassword(password, context.event.listenerPasswordHash)
 }
 
+/** Event-wide listener session scope (directory password gate). */
+export const EVENT_LISTENER_SESSION_SCOPE = '__event__'
+
 export function getListenerSessionCookieName(eventSlug: string, channelSlug: string): string {
   return `ablaut_listener_${eventSlug}_${channelSlug}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 48)
+}
+
+export function getEventListenerSessionCookieName(eventSlug: string): string {
+  return getListenerSessionCookieName(eventSlug, EVENT_LISTENER_SESSION_SCOPE)
+}
+
+export function createEventListenerSessionToken(eventSlug: string): string {
+  return createListenerSessionToken(eventSlug, EVENT_LISTENER_SESSION_SCOPE)
+}
+
+export function verifyEventListenerSessionToken(eventSlug: string, token: string | undefined): boolean {
+  return verifyListenerSessionToken(eventSlug, EVENT_LISTENER_SESSION_SCOPE, token)
 }
 
 export function createListenerSessionToken(eventSlug: string, channelSlug: string): string {
@@ -74,13 +89,20 @@ export function resolveListenerSessionToken(
     bodyToken?: string | null
     cookieToken?: string | null
     headerToken?: string | null
+    eventScopeToken?: string | null
   },
 ): string | undefined {
   const token = sources.headerToken || sources.bodyToken || sources.cookieToken
 
-  if (!token) {
-    return undefined
+  if (token && verifyListenerSessionToken(eventSlug, channelSlug, token)) {
+    return token
   }
 
-  return verifyListenerSessionToken(eventSlug, channelSlug, token) ? token : undefined
+  const eventToken = sources.eventScopeToken
+
+  if (eventToken && verifyEventListenerSessionToken(eventSlug, eventToken)) {
+    return eventToken
+  }
+
+  return undefined
 }

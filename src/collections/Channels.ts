@@ -3,16 +3,10 @@ import type { CollectionConfig, PayloadRequest } from 'payload'
 import { canCreateChannel } from '@/access/canCreateChannel'
 import { canManageChannel } from '@/access/canManageChannel'
 import { canReadChannel } from '@/access/canReadChannel'
+import { slugifyChannelName } from '@/lib/channel-identity'
 import { getLiveKitRoomName } from '@/lib/livekit'
+import { syncChannelHlsPlaybackUrl } from '@/lib/streaming/resolve-channel-stream'
 import { hashSpeakerPassword } from '@/lib/speaker-password'
-
-function formatSlug(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
 
 function normalizeRelationshipID(value: number | string | { id?: number | string } | null | undefined) {
   if (typeof value === 'number' || typeof value === 'string') {
@@ -100,10 +94,16 @@ export const Channels: CollectionConfig = {
                 {
                   name: 'languageCode',
                   type: 'text',
+                  admin: {
+                    description: 'Legacy field. Studio uses channel name as the display label.',
+                  },
                 },
                 {
                   name: 'languageLabel',
                   type: 'text',
+                  admin: {
+                    description: 'Legacy field. Studio uses channel name as the display label.',
+                  },
                 },
               ],
             },
@@ -156,13 +156,45 @@ export const Channels: CollectionConfig = {
                 {
                   name: 'hlsEnabled',
                   type: 'checkbox',
-                  defaultValue: false,
+                  defaultValue: true,
+                  admin: {
+                    description: 'Enable LL-HLS compatibility fallback for this channel.',
+                  },
                 },
               ],
             },
             {
               name: 'icecastFallbackUrl',
               type: 'text',
+            },
+            {
+              name: 'hlsPlaybackUrl',
+              type: 'text',
+              admin: {
+                description: 'Auto-generated HLS manifest URL when egress is active.',
+                readOnly: true,
+              },
+            },
+            {
+              name: 'hlsEgressStatus',
+              type: 'select',
+              defaultValue: 'idle',
+              options: [
+                { label: 'Idle', value: 'idle' },
+                { label: 'Starting', value: 'starting' },
+                { label: 'Live', value: 'live' },
+                { label: 'Error', value: 'error' },
+              ],
+              admin: {
+                readOnly: true,
+              },
+            },
+            {
+              name: 'hlsEgressId',
+              type: 'text',
+              admin: {
+                readOnly: true,
+              },
             },
             {
               name: 'audioQuality',
@@ -272,11 +304,11 @@ export const Channels: CollectionConfig = {
         const nextData = { ...data }
 
         if (typeof nextData.name === 'string' && !nextData.slug) {
-          nextData.slug = formatSlug(nextData.name)
+          nextData.slug = slugifyChannelName(nextData.name)
         }
 
         if (typeof nextData.slug === 'string') {
-          nextData.slug = formatSlug(nextData.slug)
+          nextData.slug = slugifyChannelName(nextData.slug)
         }
 
         if (operation === 'create' && req.user?.id && !nextData.createdBy) {
@@ -305,7 +337,7 @@ export const Channels: CollectionConfig = {
             typeof nextData.slug === 'string' && nextData.slug.length > 0
               ? nextData.slug
               : typeof nextData.name === 'string'
-                ? formatSlug(nextData.name)
+                ? slugifyChannelName(nextData.name)
                 : 'channel'
           const defaultRoomName = getLiveKitRoomName(eventSlug, channelSlug)
 
@@ -315,6 +347,28 @@ export const Channels: CollectionConfig = {
 
           if (!nextData.livekitRoomName) {
             nextData.livekitRoomName = defaultRoomName
+          }
+
+          const settings = await req.payload.findGlobal({
+            slug: 'site-settings',
+            overrideAccess: true,
+            req,
+          })
+
+          if (nextData.hlsEnabled === true) {
+            nextData.hlsPlaybackUrl = syncChannelHlsPlaybackUrl(
+              {
+                hlsEnabled: true,
+                hlsPlaybackUrl: typeof nextData.hlsPlaybackUrl === 'string' ? nextData.hlsPlaybackUrl : null,
+                slug: channelSlug,
+              },
+              { slug: eventSlug },
+              settings,
+            )
+          } else if (nextData.hlsEnabled === false) {
+            nextData.hlsPlaybackUrl = null
+            nextData.hlsEgressStatus = 'idle'
+            nextData.hlsEgressId = null
           }
         }
 

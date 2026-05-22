@@ -33,6 +33,7 @@ export type DashboardEvent = Pick<
   | 'description'
   | 'id'
   | 'location'
+  | 'organization'
   | 'publicListenerEnabled'
   | 'slug'
   | 'status'
@@ -40,6 +41,8 @@ export type DashboardEvent = Pick<
   | 'updatedAt'
 > & {
   channelCount: number
+  organizationId?: number | null
+  organizationTitle?: string | null
 }
 
 export type DashboardSummary = {
@@ -52,6 +55,8 @@ export type DashboardSummary = {
 }
 
 function normalizeEvent(event: Event, channelCount = 0): DashboardEvent {
+  const organization = typeof event.organization === 'object' ? event.organization : null
+
   return {
     channelCount,
     createdBy: event.createdBy,
@@ -61,6 +66,9 @@ function normalizeEvent(event: Event, channelCount = 0): DashboardEvent {
     description: event.description,
     id: event.id,
     location: event.location,
+    organization: event.organization,
+    organizationId: organization?.id ?? (typeof event.organization === 'number' ? event.organization : null),
+    organizationTitle: organization?.name ?? null,
     publicListenerEnabled: event.publicListenerEnabled,
     slug: event.slug,
     status: event.status,
@@ -131,7 +139,7 @@ export async function getDashboardEvents(limit = 100): Promise<DashboardEvent[]>
   try {
     events = await payload.find({
       collection: 'events',
-      depth: 0,
+      depth: 1,
       limit,
       overrideAccess: false,
       pagination: false,
@@ -147,6 +155,15 @@ export async function getDashboardEvents(limit = 100): Promise<DashboardEvent[]>
   }
 
   return Promise.all(events.docs.map(async (event) => normalizeEvent(event, await getChannelCount(event.id, user))))
+}
+
+export async function getDashboardEventsForOrganization(
+  organizationId: number,
+  limit = 100,
+): Promise<DashboardEvent[]> {
+  const events = await getDashboardEvents(limit)
+
+  return events.filter((event) => event.organizationId === organizationId)
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {

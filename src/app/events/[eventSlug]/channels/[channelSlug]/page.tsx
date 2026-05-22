@@ -4,16 +4,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 
-import { IconActionLink } from '@/components/ActionIcons'
 import { ChannelAdvancedSettings } from '@/components/ChannelAdvancedSettings'
 import { InlineEditField } from '@/components/InlineEditField'
 import { Layout } from '@/components/Layout'
-import { QRPopup } from '@/components/QRPopup'
+import { RouteActionCluster } from '@/components/RouteActionCluster'
 import { requireAppUser } from '@/lib/app-auth'
 import { formatEventChannelTitle } from '@/lib/branding'
 import { getDashboardChannel, getDashboardEvent } from '@/lib/dashboard-data'
 import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
 import { generateQrDataUrl } from '@/lib/qrcode'
+import { resolveChannelStreamInfo } from '@/lib/streaming/resolve-channel-stream'
 import { updateChannelSummaryAction } from '@/app/events/[eventSlug]/channels/actions'
 import { eventListenerPasswordConfigured } from '@/lib/listener-password'
 
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ChannelDetailPage({ params, searchParams }: PageProps) {
   const { eventSlug, channelSlug } = await params
-  const { settings } = await searchParams
+  const { settings: settingsQuery } = await searchParams
   const channel = await getDashboardChannel(eventSlug, channelSlug)
 
   if (!channel) {
@@ -99,6 +99,15 @@ export default async function ChannelDetailPage({ params, searchParams }: PagePr
   }
 
   const listenerPasswordReady = eventListenerPasswordConfigured(eventRecord)
+  const settings = await payload.findGlobal({
+    slug: 'site-settings',
+    overrideAccess: true,
+  })
+  const streamInfo = resolveChannelStreamInfo({
+    channel: channelSettings,
+    event: eventRecord,
+    settings,
+  })
 
   const publicBaseUrl = await getRequestBaseUrl()
   const listenerUrl = getListenerUrl(eventSlug, channelSlug, publicBaseUrl)
@@ -115,38 +124,30 @@ export default async function ChannelDetailPage({ params, searchParams }: PagePr
           <span className={`us-chip ${channel.enabled === false ? 'us-chip-warning' : 'us-chip-blue'}`}>
             {channel.enabled === false ? 'Disabled' : 'Enabled'}
           </span>
-          {channel.languageLabel || channel.languageCode ? (
-            <span className="us-chip us-chip-muted">{channel.languageLabel || channel.languageCode}</span>
-          ) : null}
           <Link className="us-button-secondary ml-auto px-3 py-2 text-sm font-medium" href={`/events/${eventSlug}`}>
             Back to event
           </Link>
         </div>
 
         <article className="us-panel flex flex-wrap items-center gap-3 px-4 py-4">
-          <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--us-muted)' }}>
-            Links
-          </span>
-          <QRPopup
-            fileName={`${eventSlug}-${channelSlug}-listener.png`}
-            label={`${channel.name} listener`}
-            qrDataUrl={listenerQrDataUrl}
-            triggerLabel="Listener QR"
-            url={listenerUrl}
-          />
-          <IconActionLink href={listenerUrl} icon="open" target="_blank">
-            Listener page
-          </IconActionLink>
-          <QRPopup
-            fileName={`${eventSlug}-${channelSlug}-speaker.png`}
-            label={`${channel.name} speaker`}
+          <RouteActionCluster
+            openLabel="Open speaker page"
             qrDataUrl={speakerQrDataUrl}
-            triggerLabel="Speaker QR"
+            qrFileName={`${eventSlug}-${channelSlug}-speaker.png`}
+            qrLabel={`${channel.name} speaker`}
+            qrTriggerLabel="Speaker QR"
             url={speakerUrl}
+            variant="speaker"
           />
-          <IconActionLink href={speakerUrl} icon="open" target="_blank">
-            Speaker page
-          </IconActionLink>
+          <RouteActionCluster
+            openLabel="Open listener page"
+            qrDataUrl={listenerQrDataUrl}
+            qrFileName={`${eventSlug}-${channelSlug}-listener.png`}
+            qrLabel={`${channel.name} listener`}
+            qrTriggerLabel="Listener QR"
+            url={listenerUrl}
+            variant="listener"
+          />
         </article>
 
         <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -180,42 +181,46 @@ export default async function ChannelDetailPage({ params, searchParams }: PagePr
               </InlineEditField>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {channel.webrtcEnabled === false ? <span className="us-chip us-chip-warning">WebRTC off</span> : null}
-              {channel.hlsEnabled ? <span className="us-chip us-chip-blue">HLS enabled</span> : null}
-              {channel.icecastFallbackUrl ? <span className="us-chip us-chip-blue">Fallback configured</span> : null}
+              {streamInfo.webrtcAvailable ? <span className="us-chip us-chip-blue">WebRTC available</span> : <span className="us-chip us-chip-warning">WebRTC off</span>}
+              {streamInfo.hlsAvailable ? <span className="us-chip us-chip-blue">HLS available</span> : null}
+              {streamInfo.hlsEgressStatus === 'live' ? <span className="us-chip us-chip-muted">HLS live</span> : null}
+              {streamInfo.hlsEgressStatus === 'starting' ? <span className="us-chip us-chip-muted">HLS starting</span> : null}
+              {streamInfo.hlsEgressStatus === 'error' ? <span className="us-chip us-chip-warning">HLS error</span> : null}
+              {streamInfo.fallbackUrl ? <span className="us-chip us-chip-blue">External fallback</span> : null}
             </div>
           </article>
 
           <article className="us-panel px-6 py-6">
             <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
-              Room & routes
+              Auto-generated
             </p>
-            <dl className="mt-4 grid gap-3 text-sm leading-6" style={{ color: 'var(--us-text)' }}>
+            <p className="mt-2 text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
+              Public URLs and the LiveKit room are derived from the channel slug.
+            </p>
+            <dl className="mt-4 space-y-3 text-sm leading-6" style={{ color: 'var(--us-text)' }}>
+              <div>
+                <dt className="font-semibold">URL slug</dt>
+                <dd className="break-all font-mono text-xs" style={{ color: 'var(--us-muted)' }}>
+                  {channelSlug}
+                </dd>
+              </div>
               <div>
                 <dt className="font-semibold">LiveKit room</dt>
-                <dd className="break-all" style={{ color: 'var(--us-muted)' }}>
+                <dd className="break-all font-mono text-xs" style={{ color: 'var(--us-muted)' }}>
                   {channel.livekitRoomName || channel.roomName || `ablaut_${eventSlug}_${channelSlug}`}
                 </dd>
               </div>
-              <div>
-                <dt className="font-semibold">Listener</dt>
-                <dd className="break-all" style={{ color: 'var(--us-muted)' }}>
-                  /listen/{eventSlug}/{channelSlug}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-semibold">Speaker</dt>
-                <dd className="break-all" style={{ color: 'var(--us-muted)' }}>
-                  /speak/{eventSlug}/{channelSlug}
-                </dd>
-              </div>
             </dl>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <RouteActionCluster openLabel="Open speaker page" url={speakerUrl} variant="speaker" qrLabel={`${channel.name} speaker`} />
+              <RouteActionCluster openLabel="Open listener page" url={listenerUrl} variant="listener" qrLabel={`${channel.name} listener`} />
+            </div>
           </article>
 
           <div className="xl:col-span-2">
             <ChannelAdvancedSettings
               channel={channelSettings}
-              defaultOpen={settings === 'open'}
+              defaultOpen={settingsQuery === 'open'}
               eventListenerPasswordConfigured={listenerPasswordReady}
               eventSlug={eventSlug}
             />

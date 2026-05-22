@@ -1,8 +1,15 @@
+import {
+  OrganizationSelectField,
+  organizationIdFromEvent,
+  type OrganizationOption,
+} from '@/components/OrganizationSelectField'
 import type { Event } from '@/payload-types'
 
 type EventFormProps = {
   action: (formData: FormData) => Promise<void>
   event?: Event
+  organizationId?: number
+  organizations?: OrganizationOption[]
   submitLabel: string
   variant?: 'drawer' | 'full'
 }
@@ -15,8 +22,18 @@ function dateTimeValue(value?: string | null): string {
   return new Date(value).toISOString().slice(0, 16)
 }
 
-export function EventForm({ action, event, submitLabel, variant = 'full' }: EventFormProps) {
+export function EventForm({
+  action,
+  event,
+  organizationId,
+  organizations = [],
+  submitLabel,
+  variant = 'full',
+}: EventFormProps) {
   const isDrawer = variant === 'drawer'
+  const fixedOrganizationId = organizationId ?? organizationIdFromEvent(event)
+  const showOrganizationSelector = !organizationId && organizations.length > 0
+  const canSubmit = Boolean(event) || Boolean(organizationId) || organizations.length > 0
 
   return (
     <form action={action} className={isDrawer ? 'space-y-5' : 'us-panel space-y-5 px-6 py-6'}>
@@ -25,6 +42,16 @@ export function EventForm({ action, event, submitLabel, variant = 'full' }: Even
           <input name="id" type="hidden" value={event.id} />
           <input name="originalSlug" type="hidden" value={event.slug} />
         </>
+      ) : null}
+      {organizationId ? <input name="organizationId" type="hidden" value={organizationId} /> : null}
+      {!organizationId && !showOrganizationSelector && fixedOrganizationId ? (
+        <input name="organizationId" type="hidden" value={fixedOrganizationId} />
+      ) : null}
+      {showOrganizationSelector ? (
+        <OrganizationSelectField
+          defaultOrganizationId={fixedOrganizationId}
+          organizations={organizations}
+        />
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -129,6 +156,10 @@ export function EventForm({ action, event, submitLabel, variant = 'full' }: Even
           <span>Public listener pages enabled</span>
         </label>
         <label className="mt-3 flex items-start gap-3 rounded-2xl bg-white/70 px-4 py-3 text-sm" style={{ color: 'var(--us-text)' }}>
+          <input className="mt-1" defaultChecked={event?.unifiedListenerQrEnabled ?? false} name="unifiedListenerQrEnabled" type="checkbox" />
+          <span>Allow one listener QR for the whole event (channel picker)</span>
+        </label>
+        <label className="mt-3 flex items-start gap-3 rounded-2xl bg-white/70 px-4 py-3 text-sm" style={{ color: 'var(--us-text)' }}>
           <input className="mt-1" defaultChecked={event?.listenerPasswordEnabled ?? false} name="listenerPasswordEnabled" type="checkbox" />
           <span>Require event listener password (used when channels use password mode)</span>
         </label>
@@ -166,7 +197,11 @@ export function EventForm({ action, event, submitLabel, variant = 'full' }: Even
         </label>
       </div>
 
-      <button type="submit" className="us-button-primary px-5 py-3 text-sm font-medium">
+      <button
+        className="us-button-primary px-5 py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={!canSubmit}
+        type="submit"
+      >
         {submitLabel}
       </button>
     </form>

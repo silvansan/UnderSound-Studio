@@ -36,7 +36,9 @@ PAYLOAD_SECRET=replace-with-a-long-random-string-min-32-chars
 POSTGRES_USER=ablaut
 POSTGRES_PASSWORD=replace-with-a-strong-db-password
 POSTGRES_DB=ablaut
-PAYLOAD_DB_PUSH=true
+PAYLOAD_DB_PUSH=false
+PAYLOAD_RUN_MIGRATIONS=true
+PAYLOAD_WAIT_FOR_DB=true
 
 NEXT_PUBLIC_APP_URL=http://YOUR_SERVER_LAN_IP:3000
 PUBLIC_BASE_URL=http://YOUR_SERVER_LAN_IP:3000
@@ -45,6 +47,11 @@ LIVEKIT_API_KEY=ablaut
 LIVEKIT_API_SECRET=replace-with-a-long-random-livekit-secret
 LIVEKIT_URL=ws://YOUR_SERVER_LAN_IP:7880
 LIVEKIT_USE_EXTERNAL_IP=false
+LIVEKIT_PUBLIC_URL=
+
+FEATURE_HLS_EGRESS=false
+LIVEKIT_EGRESS_ENABLED=false
+HLS_PUBLIC_BASE_URL=
 
 SMTP_HOST=
 SMTP_PORT=587
@@ -63,7 +70,9 @@ PAYLOAD_SECRET=replace-with-a-long-random-string-min-32-chars
 POSTGRES_USER=ablaut
 POSTGRES_PASSWORD=replace-with-a-strong-db-password
 POSTGRES_DB=ablaut
-PAYLOAD_DB_PUSH=true
+PAYLOAD_DB_PUSH=false
+PAYLOAD_RUN_MIGRATIONS=true
+PAYLOAD_WAIT_FOR_DB=true
 
 NEXT_PUBLIC_APP_URL=https://ablaut.example.com
 PUBLIC_BASE_URL=https://ablaut.example.com
@@ -72,6 +81,11 @@ LIVEKIT_API_KEY=ablaut
 LIVEKIT_API_SECRET=replace-with-a-long-random-livekit-secret
 LIVEKIT_URL=wss://livekit.example.com
 LIVEKIT_USE_EXTERNAL_IP=true
+LIVEKIT_PUBLIC_URL=
+
+FEATURE_HLS_EGRESS=false
+LIVEKIT_EGRESS_ENABLED=false
+HLS_PUBLIC_BASE_URL=https://ablaut.example.com/hls
 
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
@@ -228,13 +242,40 @@ QR links use the host you opened the dashboard with.
 
 ## 7. Updating Later
 
-1. Back up the database.
-2. Back up uploaded media.
-3. Update the stack image/source or paste the newer `docker-compose.yml`.
-4. Keep the same named volumes:
-   - `ablaut_db`
-   - `ablaut_uploads`
-5. Redeploy the stack.
+### Safe redeploy checklist
+
+1. **Back up first** (see [`docs/MIGRATION.md`](docs/MIGRATION.md)):
+   - `docker compose exec db pg_dump -U ablaut ablaut > ablaut-backup.sql`
+   - Archive the `ablaut_uploads` volume
+2. **Keep volumes** — never delete `ablaut_db` or `ablaut_uploads` on routine updates.
+3. **Update the stack** — pin a Git tag in `PORTAINER_STACK_PINNED.yml` when possible.
+4. **Keep migration env vars**:
+   - `PAYLOAD_DB_PUSH=false`
+   - `PAYLOAD_RUN_MIGRATIONS=true`
+   - `PAYLOAD_WAIT_FOR_DB=true`
+5. **Redeploy** and watch app logs for migration completion messages.
+6. **Verify** — open `/api/health?deep=1`, log in, and spot-check events/channels.
+7. **Rollback** — revert the Git tag and redeploy. Restore the database backup only if a migration corrupted data.
+
+### Database schema on redeploy
+
+Production Docker runs **registered Payload migrations automatically** on startup. `PAYLOAD_DB_PUSH=true` does **not** sync production schema — schema push is development-only.
+
+Every schema change must include:
+
+1. A migration file in `src/migrations/`
+2. A matching entry in `src/migrations/index.ts`
+
+The build runs `npm run verify:migrations` to catch missing registrations before deploy.
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| Missing column after deploy | Migration not registered in `index.ts` | Fix code, redeploy, or apply SQL manually if urgent |
+| App health check fails briefly on first boot | Migrations still running | Wait for `start_period`; check logs |
+| Login works but new fields missing | Old image still deployed | Confirm Portainer rebuilt/pulled the latest tag |
+| 500 errors after deploy | Migration failed mid-start | Restore backup, fix migration, redeploy |
 
 Do not remove the volumes unless you want to erase users, events, channels, settings, and uploads.
 

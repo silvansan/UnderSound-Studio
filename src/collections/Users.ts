@@ -284,14 +284,20 @@ export const Users: CollectionConfig = {
     ],
     beforeChange: [
       ({ data, operation, req }) => {
+        const nextData = { ...data }
+
+        if (typeof nextData.email === 'string') {
+          nextData.email = nextData.email.trim().toLowerCase()
+        }
+
         if (operation === 'create' && isAdminUser(req.user) && !isSuperAdminUser(req.user)) {
           return {
-            ...data,
+            ...nextData,
             role: 'moderator',
           }
         }
 
-        return data
+        return nextData
       },
     ],
   },

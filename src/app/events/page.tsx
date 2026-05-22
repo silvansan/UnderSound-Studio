@@ -3,11 +3,15 @@ import configPromise from '@payload-config'
 import Link from 'next/link'
 import { getPayload } from 'payload'
 
-import { canDeleteEvent } from '@/app/events/actions'
-import { Layout } from '@/components/Layout'
+import { canDeleteEvent, createEventAction } from '@/app/events/actions'
+import { EventForm } from '@/components/EventForm'
 import { EventRow } from '@/components/EventRow'
+import { Layout } from '@/components/Layout'
+import { PanelDrawer } from '@/components/PanelDrawer'
 import { TruncatedList } from '@/components/TruncatedList'
 import { getDashboardEvents } from '@/lib/dashboard-data'
+import { assignGroupTints } from '@/lib/list-group-tints'
+import { getManageableOrganizations } from '@/lib/organization-data'
 import { requireAppUser } from '@/lib/app-auth'
 import { pageMetadata } from '@/lib/branding'
 import { isAdminUser } from '@/lib/permissions'
@@ -21,7 +25,11 @@ type PageProps = {
 
 export default async function EventsPage({ searchParams }: PageProps) {
   const { status } = await searchParams
-  const [events, user] = await Promise.all([getDashboardEvents(), requireAppUser()])
+  const [events, user, organizations] = await Promise.all([
+    getDashboardEvents(),
+    requireAppUser(),
+    getManageableOrganizations(),
+  ])
   const payload = await getPayload({ config: configPromise })
   const visibleEvents =
     status === 'active' || status === 'draft' || status === 'archived'
@@ -29,12 +37,23 @@ export default async function EventsPage({ searchParams }: PageProps) {
       : events
   const canCreateEvents = isAdminUser(user)
 
+  const sortedEvents = [...visibleEvents].sort((a, b) => {
+    const orgCompare = (a.organizationTitle ?? '').localeCompare(b.organizationTitle ?? '')
+
+    if (orgCompare !== 0) {
+      return orgCompare
+    }
+
+    return a.title.localeCompare(b.title)
+  })
+
   const eventsWithDelete = await Promise.all(
-    visibleEvents.map(async (event) => ({
+    sortedEvents.map(async (event) => ({
       ...event,
       canDelete: await canDeleteEvent(payload, user, event),
     })),
   )
+  const tintedEvents = assignGroupTints(eventsWithDelete, (event) => String(event.organizationId ?? '__none__'))
 
   return (
     <Layout hideFooter hideHeader title="Events">
@@ -68,22 +87,29 @@ export default async function EventsPage({ searchParams }: PageProps) {
             )
           })}
           {canCreateEvents ? (
-            <Link className="us-button-primary ml-auto px-5 py-3 text-sm font-medium" href="/events/new">
-              Create event
-            </Link>
+            <div className="ml-auto">
+              <PanelDrawer description="Choose an organization and create a new event." title="Create event">
+                <EventForm
+                  action={createEventAction}
+                  organizations={organizations}
+                  submitLabel="Create event"
+                  variant="drawer"
+                />
+              </PanelDrawer>
+            </div>
           ) : null}
         </div>
 
-        {eventsWithDelete.length > 0 ? (
+        {tintedEvents.length > 0 ? (
           <div className="us-panel overflow-hidden px-4 py-4">
-            <div className="hidden grid-cols-[1.3fr_1fr_120px_auto] gap-3 px-2 pb-3 text-xs font-semibold uppercase tracking-[0.12em] lg:grid" style={{ color: 'var(--us-muted)' }}>
-              <span>Event</span>
-              <span>Status</span>
-              <span>When / where</span>
-              <span>{eventsWithDelete.some((event) => event.canDelete) ? 'Delete' : ''}</span>
+            <div className="us-data-row us-data-row-header us-data-row--cols-4 px-4" style={{ color: 'var(--us-muted)' }}>
+              <span className="us-data-row__lead">Event</span>
+              <span className="us-data-row__chips">Status</span>
+              <span className="us-data-row__detail">When / where</span>
+              <span className="us-data-row__actions">{tintedEvents.some((event) => event.canDelete) ? 'Delete' : ''}</span>
             </div>
             <TruncatedList as="ul" itemLabel="events" listClassName="space-y-2">
-              {eventsWithDelete.map((event) => (
+              {tintedEvents.map((event) => (
                 <EventRow
                   canDelete={event.canDelete}
                   channelCount={event.channelCount}
@@ -92,6 +118,8 @@ export default async function EventsPage({ searchParams }: PageProps) {
                   eventId={event.id}
                   key={event.slug}
                   location={event.location}
+                  organizationTitle={event.organizationTitle}
+                  rowTint={event.rowTint}
                   slug={event.slug}
                   status={event.status ?? 'draft'}
                   title={event.title}
@@ -102,8 +130,24 @@ export default async function EventsPage({ searchParams }: PageProps) {
         ) : (
           <div className="us-panel px-6 py-6">
             <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
-              No events exist yet.
+              {organizations.length === 0 && canCreateEvents
+                ? 'No events yet. Create or join an organization first, then add an event.'
+                : 'No events exist yet.'}
             </p>
+            {organizations.length === 0 && canCreateEvents ? (
+              <Link className="us-button-primary mt-4 inline-flex px-4 py-2.5 text-sm font-medium" href="/organizations">
+                Open organizations
+              </Link>
+            ) : canCreateEvents ? (
+              <PanelDrawer description="Choose an organization and create a new event." title="Create event">
+                <EventForm
+                  action={createEventAction}
+                  organizations={organizations}
+                  submitLabel="Create event"
+                  variant="drawer"
+                />
+              </PanelDrawer>
+            ) : null}
           </div>
         )}
       </section>

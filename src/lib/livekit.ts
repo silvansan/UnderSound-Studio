@@ -20,8 +20,65 @@ function getLiveKitConfig() {
   return { apiKey, apiSecret, url }
 }
 
+export function getLiveKitConfigOrNull():
+  | {
+      apiKey: string
+      apiSecret: string
+      url: string
+    }
+  | null {
+  try {
+    return getLiveKitConfig()
+  } catch {
+    return null
+  }
+}
+
+export function getLiveKitHttpUrl(wsUrl: string): string {
+  return wsUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://').replace(/\/$/, '')
+}
+
+export function logLiveKitBrowserUrlResolution(request: Request, configuredPublicUrl?: string | null): void {
+  const browserUrl = getBrowserLiveKitURL(request, configuredPublicUrl)
+
+  if (browserUrl) {
+    console.info(`[ablaut] LiveKit browser URL resolved: ${browserUrl}`)
+    return
+  }
+
+  console.warn('[ablaut] LiveKit browser URL could not be resolved for this request.')
+}
+
 function isLocalHost(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+}
+
+function getRequestHost(request: Request): string | null {
+  const requestHost = request.headers.get('x-forwarded-host') || request.headers.get('host')
+
+  return requestHost?.split(':')[0] ?? null
+}
+
+function rewriteLocalhostLiveKitUrlForRequest(url: string, request: Request): string {
+  const appHost = getRequestHost(request)
+
+  if (!appHost || isLocalHost(appHost)) {
+    return url
+  }
+
+  try {
+    const liveKitUrl = new URL(url)
+
+    if (!isLocalHost(liveKitUrl.hostname)) {
+      return url.replace(/\/$/, '')
+    }
+
+    liveKitUrl.hostname = appHost
+
+    return liveKitUrl.toString().replace(/\/$/, '')
+  } catch {
+    return url
+  }
 }
 
 function normalizeLiveKitURL(url: string | undefined): string | undefined {
@@ -40,7 +97,18 @@ function normalizeLiveKitURL(url: string | undefined): string | undefined {
   return url
 }
 
-export function getBrowserLiveKitURL(request: Request): string | undefined {
+export function getBrowserLiveKitURL(
+  request: Request,
+  configuredPublicUrl?: string | null,
+): string | undefined {
+  const explicitPublic =
+    normalizeLiveKitURL(configuredPublicUrl?.trim()) ??
+    normalizeLiveKitURL(process.env.LIVEKIT_PUBLIC_URL?.trim())
+
+  if (explicitPublic) {
+    return rewriteLocalhostLiveKitUrlForRequest(explicitPublic, request)
+  }
+
   const configuredUrl = normalizeLiveKitURL(process.env.LIVEKIT_URL?.trim())
 
   if (!configuredUrl) {
@@ -59,14 +127,17 @@ export function getBrowserLiveKitURL(request: Request): string | undefined {
     return configuredUrl
   }
 
-  const appHost = requestHost.split(':')[0]
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const protocol = forwardedProto === 'https' ? 'wss:' : liveKitUrl.protocol
 
-  liveKitUrl.hostname = appHost
-  liveKitUrl.protocol = protocol
+  if (forwardedProto === 'https') {
+    return undefined
+  }
 
-  return liveKitUrl.toString().replace(/\/$/, '')
+  return rewriteLocalhostLiveKitUrlForRequest(configuredUrl, request)
+}
+
+export function getLiveKitBrowserUrlErrorMessage(): string {
+  return 'LiveKit browser URL is not configured. Set LIVEKIT_PUBLIC_URL or LIVEKIT_URL to a WebSocket URL reachable from the browser (for HTTPS deployments, use wss:// on your LiveKit domain). You can also set the LiveKit public URL in Settings.'
 }
 
 export function getLiveKitRoomName(eventSlug: string, channelSlug: string): string {

@@ -13,21 +13,44 @@ services:
       DATABASE_URI: postgres://${POSTGRES_USER:-ablaut}:${POSTGRES_PASSWORD:-ablaut}@db:5432/${POSTGRES_DB:-ablaut}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
-      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+      # Server-side SDK uses the Docker network; browsers use LIVEKIT_PUBLIC_URL.
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       PAYLOAD_DB_PUSH: ${PAYLOAD_DB_PUSH:-true}
+      PAYLOAD_RUN_MIGRATIONS: ${PAYLOAD_RUN_MIGRATIONS:-true}
+      PAYLOAD_WAIT_FOR_DB: ${PAYLOAD_WAIT_FOR_DB:-true}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      HLS_PUBLIC_BASE_URL: ${HLS_PUBLIC_BASE_URL:-http://localhost:3000/hls}
+      HLS_SEGMENTS_DIR: ${HLS_SEGMENTS_DIR:-/app/hls-segments}
+      HLS_EGRESS_OUTPUT_DIR: ${HLS_EGRESS_OUTPUT_DIR:-/out}
+      FEATURE_HLS_EGRESS: ${FEATURE_HLS_EGRESS:-true}
+      LIVEKIT_EGRESS_ENABLED: ${LIVEKIT_EGRESS_ENABLED:-true}
     depends_on:
       db:
         condition: service_healthy
       livekit:
         condition: service_started
+      redis:
+        condition: service_started
+      livekit-egress:
+        condition: service_started
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/health?deep=1').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     volumes:
       - ablaut_uploads:/app/media
+      - ablaut_hls_segments:/app/hls-segments
     restart: unless-stopped
 
   livekit:
-    image: livekit/livekit-server:v1.9.1
+    image: livekit/livekit-server:v1.12.0
+    depends_on:
+      redis:
+        condition: service_started
     command:
       - --config-body
       - |
@@ -39,6 +62,8 @@ services:
           port_range_start: 50000
           port_range_end: 50100
           use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP:-false}
+        redis:
+          address: redis:6379
         keys:
           ${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}
     environment:
@@ -48,6 +73,47 @@ services:
       - '7880:7880'
       - '7881:7881'
       - '50000-50100:50000-50100/udp'
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  hls-volume-init:
+    image: busybox:1.36
+    user: '0:0'
+    volumes:
+      - ablaut_hls_segments:/out
+    command: ['sh', '-c', 'chmod 1777 /out']
+    restart: 'no'
+
+  livekit-egress:
+    image: livekit/egress:v1.12.0
+    cap_add:
+      - SYS_ADMIN
+    depends_on:
+      hls-volume-init:
+        condition: service_completed_successfully
+      livekit:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      EGRESS_CONFIG_BODY: |
+        log_level: info
+        api_key: ${LIVEKIT_API_KEY:-devkey}
+        api_secret: ${LIVEKIT_API_SECRET:-secret}
+        ws_url: ws://livekit:7880
+        insecure: true
+        health_port: 9090
+        template_base: https://livekit.io/egress-template
+        redis:
+          address: redis:6379
+        file_output:
+          local:
+            directory: /out
+    volumes:
+      - ablaut_hls_segments:/out
     restart: unless-stopped
 
   db:
@@ -79,3 +145,4 @@ services:
 volumes:
   ablaut_db:
   ablaut_uploads:
+  ablaut_hls_segments:

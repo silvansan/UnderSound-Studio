@@ -1,0 +1,166 @@
+import configPromise from '@payload-config'
+import { getPayload } from 'payload'
+
+import { requireAppUser } from '@/lib/app-auth'
+import { getManageableOrganizations } from '@/lib/organization-data'
+import { isSuperAdminUser } from '@/lib/permissions'
+import type { Organization, OrganizationMembership, User } from '@/payload-types'
+
+export type UserHubEntry = {
+  globalRole: string
+  organizationId: number | null
+  organizationName: string | null
+  organizationSlug: string | null
+  roleInOrganization: string | null
+  userEmail: string
+  userId: number
+  userName: string
+}
+
+export type UsersHubData = {
+  entries: UserHubEntry[]
+  organizations: Organization[]
+  showOrganizationColumn: boolean
+}
+
+function organizationFromMembership(membership: OrganizationMembership): {
+  id: number
+  name: string
+  slug: string
+} | null {
+  const organization = membership.organization
+
+  if (typeof organization === 'number') {
+    return null
+  }
+
+  if (!organization) {
+    return null
+  }
+
+  return {
+    id: organization.id,
+    name: organization.name,
+    slug: organization.slug,
+  }
+}
+
+function buildEntryFromMembership(membership: OrganizationMembership, user: User): UserHubEntry | null {
+  const organization = organizationFromMembership(membership)
+
+  if (!organization) {
+    return null
+  }
+
+  return {
+    globalRole: user.role ?? 'moderator',
+    organizationId: organization.id,
+    organizationName: organization.name,
+    organizationSlug: organization.slug,
+    roleInOrganization: membership.roleInOrganization ?? 'moderator',
+    userEmail: user.email,
+    userId: user.id,
+    userName: user.name,
+  }
+}
+
+export async function getUsersHubData(): Promise<UsersHubData> {
+  const currentUser = await requireAppUser()
+  const payload = await getPayload({ config: configPromise })
+  const organizations = await getManageableOrganizations()
+  const organizationIDs = organizations.map((organization) => organization.id)
+  const showOrganizationColumn = isSuperAdminUser(currentUser) || organizations.length > 1
+
+  if (organizationIDs.length === 0) {
+    return {
+      entries: [],
+      organizations,
+      showOrganizationColumn,
+    }
+  }
+
+  const memberships = await payload.find({
+    collection: 'organization-memberships',
+    depth: 1,
+    limit: 2000,
+    overrideAccess: false,
+    pagination: false,
+    user: currentUser,
+    where: {
+      and: [
+        {
+          organization: {
+            in: organizationIDs,
+          },
+        },
+        {
+          status: {
+            equals: 'active',
+          },
+        },
+      ],
+    },
+  })
+
+  const entries: UserHubEntry[] = []
+
+  for (const membership of memberships.docs) {
+    const memberUser = membership.user
+
+    if (typeof memberUser === 'number') {
+      continue
+    }
+
+    const entry = buildEntryFromMembership(membership, memberUser)
+
+    if (entry) {
+      entries.push(entry)
+    }
+  }
+
+  if (isSuperAdminUser(currentUser)) {
+    const memberUserIDs = new Set(entries.map((entry) => entry.userId))
+    const unassignedUsers = await payload.find({
+      collection: 'users',
+      depth: 0,
+      limit: 500,
+      overrideAccess: false,
+      pagination: false,
+      sort: 'name',
+      user: currentUser,
+    })
+
+    for (const user of unassignedUsers.docs) {
+      if (memberUserIDs.has(user.id)) {
+        continue
+      }
+
+      entries.push({
+        globalRole: user.role ?? 'moderator',
+        organizationId: null,
+        organizationName: null,
+        organizationSlug: null,
+        roleInOrganization: null,
+        userEmail: user.email,
+        userId: user.id,
+        userName: user.name,
+      })
+    }
+  }
+
+  entries.sort((a, b) => {
+    const organizationCompare = (a.organizationName ?? '').localeCompare(b.organizationName ?? '')
+
+    if (organizationCompare !== 0) {
+      return organizationCompare
+    }
+
+    return a.userName.localeCompare(b.userName)
+  })
+
+  return {
+    entries,
+    organizations,
+    showOrganizationColumn,
+  }
+}

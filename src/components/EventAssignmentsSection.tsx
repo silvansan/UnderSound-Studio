@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
+import { ListGroupRow } from '@/components/ListGroupRow'
 import { TruncatedList } from '@/components/TruncatedList'
+import { assignGroupTints } from '@/lib/list-group-tints'
 import type { EventAssignment, User } from '@/payload-types'
 
 type EventAssignmentsSectionProps = {
@@ -25,6 +27,19 @@ export function EventAssignmentsSection({ assignments, canManageAssignments }: E
     return null
   }
 
+  const tintedAssignments = assignGroupTints(
+    [...assignments].sort((a, b) => {
+      const roleCompare = String(a.roleForEvent ?? '').localeCompare(String(b.roleForEvent ?? ''))
+
+      if (roleCompare !== 0) {
+        return roleCompare
+      }
+
+      return userLabel(a.user).localeCompare(userLabel(b.user))
+    }),
+    (assignment) => String(assignment.roleForEvent ?? '__none__'),
+  )
+
   return (
     <div className="rounded-2xl border px-4 py-4" style={{ borderColor: 'var(--us-border)' }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -38,15 +53,20 @@ export function EventAssignmentsSection({ assignments, canManageAssignments }: E
         ) : null}
       </div>
 
-      {assignments.length > 0 ? (
+      {tintedAssignments.length > 0 ? (
         <TruncatedList className="mt-4" itemLabel="assignments" listClassName="space-y-3">
-          {assignments.map((assignment) => (
-            <div key={assignment.id} className="rounded-2xl bg-white/70 px-4 py-3 text-sm" style={{ color: 'var(--us-text)' }}>
+          {tintedAssignments.map((assignment) => (
+            <ListGroupRow
+              className="rounded-2xl px-4 py-3 text-sm"
+              key={assignment.id}
+              rowTint={assignment.rowTint}
+              style={{ color: 'var(--us-text)' }}
+            >
               <p className="font-semibold">{userLabel(assignment.user)}</p>
               <p className="mt-1 capitalize" style={{ color: 'var(--us-muted)' }}>
                 {assignment.roleForEvent} · user role {userRole(assignment.user)}
               </p>
-            </div>
+            </ListGroupRow>
           ))}
         </TruncatedList>
       ) : (

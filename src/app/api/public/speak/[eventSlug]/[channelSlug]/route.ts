@@ -10,7 +10,7 @@ type RouteContext = {
   params: Promise<{ channelSlug: string; eventSlug: string }>
 }
 
-export async function GET(_request: Request, { params }: RouteContext) {
+export async function GET(request: Request, { params }: RouteContext) {
   const { channelSlug, eventSlug } = await params
   const context = await getPublicChannelContext(eventSlug, channelSlug)
 
@@ -18,5 +18,5 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: 'Speaker channel not found' }, { status: 404 })
   }
 
-  return NextResponse.json(toPublicChannelResponse(context, '/api/livekit/speaker-token'))
+  return NextResponse.json(toPublicChannelResponse(context, '/api/livekit/speaker-token', request))
 }

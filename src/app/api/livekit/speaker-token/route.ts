@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
-import { createLiveKitIdentity, createSpeakerToken, getBrowserLiveKitURL } from '@/lib/livekit'
+import { createLiveKitIdentity, createSpeakerToken, getBrowserLiveKitURL, getLiveKitBrowserUrlErrorMessage, logLiveKitBrowserUrlResolution } from '@/lib/livekit'
 import { getPublicChannelContext, isSpeakerPubliclyAvailable, isSpeakerTokenAvailable } from '@/lib/public-channel'
 import { rateLimitRequest } from '@/lib/rate-limit'
 import {
@@ -69,12 +69,19 @@ export async function POST(request: Request) {
   }
 
   try {
+    const browserUrl = getBrowserLiveKitURL(request, context.settings.livekitPublicUrl)
+    logLiveKitBrowserUrlResolution(request, context.settings.livekitPublicUrl)
+
+    if (!browserUrl) {
+      return NextResponse.json({ error: getLiveKitBrowserUrlErrorMessage() }, { status: 503 })
+    }
+
     const token = await createSpeakerToken(
       context.roomName,
       parseString(body.identity) ?? createLiveKitIdentity('speaker'),
       context.tokenExpiry,
       parseBoolean(body.canSubscribe) ?? true,
-      getBrowserLiveKitURL(request),
+      browserUrl,
     )
 
     return NextResponse.json(token)

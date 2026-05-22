@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "build": "npm run verify:migrations && cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "devsafe": "rimraf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
     "generate:brand": "node scripts/generate-brand-assets.mjs",
@@ -16,7 +16,11 @@
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "npm run test:int && npm run test:e2e",
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
-    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
+    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
+    "verify:migrations": "node scripts/verify-migrations-index.mjs",
+    "smoke:deploy": "node scripts/smoke-deploy.mjs",
+    "lan:urls": "node scripts/print-lan-urls.mjs",
+    "lan:doctor": "node scripts/lan-doctor.mjs"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.84.1",
@@ -28,6 +32,7 @@
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "graphql": "^16.8.1",
+    "hls.js": "^1.6.16",
     "livekit-client": "^2.19.0",
     "livekit-server-sdk": "^2.9.0",
     "next": "^15.3.9",

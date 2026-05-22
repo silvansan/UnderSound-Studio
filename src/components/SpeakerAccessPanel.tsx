@@ -1,6 +1,6 @@
 'use client'
 
-import { Room, RoomEvent } from 'livekit-client'
+import { ParticipantEvent, Room, RoomEvent, Track, type LocalTrackPublication } from 'livekit-client'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
 import { AudioEffectToggle } from '@/components/AudioEffectToggle'
@@ -26,6 +26,33 @@ type SpeakerTokenResponse = {
 }
 
 type PublishState = 'idle' | 'loading-devices' | 'connecting' | 'publishing' | 'error'
+
+async function resolvePublishedMicrophoneTrackSid(room: Room): Promise<string | undefined> {
+  const existing = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.trackSid
+
+  if (existing) {
+    return existing
+  }
+
+  return new Promise((resolve) => {
+    const timeout = window.setTimeout(() => {
+      room.localParticipant.off(ParticipantEvent.LocalTrackPublished, onPublished)
+      resolve(room.localParticipant.getTrackPublication(Track.Source.Microphone)?.trackSid)
+    }, 5000)
+
+    const onPublished = (publication: LocalTrackPublication) => {
+      if (publication.source !== Track.Source.Microphone || !publication.trackSid) {
+        return
+      }
+
+      window.clearTimeout(timeout)
+      room.localParticipant.off(ParticipantEvent.LocalTrackPublished, onPublished)
+      resolve(publication.trackSid)
+    }
+
+    room.localParticipant.on(ParticipantEvent.LocalTrackPublished, onPublished)
+  })
+}
 
 export function SpeakerAccessPanel({
   audioQualityDefaults,
@@ -208,16 +235,38 @@ export function SpeakerAccessPanel({
 
       setPublishState('publishing')
       setPublishMessage('Publishing microphone audio with the selected audio quality controls.')
+
+      const audioTrackId = await resolvePublishedMicrophoneTrackSid(room)
+
+      void fetch('/api/livekit/start-hls-egress', {
+        body: JSON.stringify({
+          audioTrackId,
+          channelSlug,
+          eventSlug,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      })
     } catch (publishError) {
       console.error('Speaker publishing failed', publishError)
       const message = publishError instanceof Error ? publishError.message : null
       roomRef.current?.disconnect()
       roomRef.current = null
       setPublishState('error')
+
+      const liveKitConnectionFailed =
+        message?.includes('Failed to fetch') ||
+        message?.includes('signal connection') ||
+        message?.includes('serverUnreachable')
+
       setPublishMessage(
-        message
-          ? `Publishing failed: ${message}`
-          : 'Publishing failed. Check microphone permissions, LiveKit settings, and channel availability.',
+        liveKitConnectionFailed
+          ? `Cannot reach LiveKit at ${url}. If the app uses HTTPS, set LIVEKIT_URL or Settings → LiveKit public URL to your browser-reachable wss:// address and ensure ports 7880/7881 and UDP 50000-50100 are open.`
+          : message
+            ? `Publishing failed: ${message}`
+            : 'Publishing failed. Check microphone permissions, LiveKit settings, and channel availability.',
       )
     }
   }
@@ -268,6 +317,13 @@ export function SpeakerAccessPanel({
   return (
     <article className="us-panel px-6 py-7">
       <span className="us-chip us-chip-blue">Speaker access ready</span>
+      {typeof window !== 'undefined' && !window.isSecureContext ? (
+        <p className="mt-4 rounded-2xl border px-4 py-3 text-sm leading-6" style={{ borderColor: 'var(--us-border)', color: 'var(--us-danger)' }}>
+          Microphone access requires a secure page. On this computer, open the speaker URL as{' '}
+          <strong>http://localhost:3000/speak/…</strong> instead of a LAN IP address. Your phone can still listen via
+          the LAN URL while you publish from localhost.
+        </p>
+      ) : null}
       <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
         Publish controls
       </h2>

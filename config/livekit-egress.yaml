@@ -1,0 +1,12 @@
+log_level: info
+api_key: devkey
+api_secret: secret
+ws_url: ws://livekit:7880
+insecure: true
+health_port: 9090
+template_base: https://livekit.io/egress-template
+redis:
+  address: redis:6379
+file_output:
+  local:
+    directory: /out

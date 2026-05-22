@@ -3,7 +3,9 @@ import {
   upsertUserEventAssignmentAction,
 } from '@/app/users/actions'
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
+import { ListGroupRow } from '@/components/ListGroupRow'
 import { TruncatedList } from '@/components/TruncatedList'
+import { assignGroupTints } from '@/lib/list-group-tints'
 import type { EventAssignment } from '@/payload-types'
 
 type AssignableEvent = {
@@ -28,6 +30,14 @@ function eventTitle(event: number | { title?: string | null } | null | undefined
   return event?.title ?? 'Event'
 }
 
+function eventID(event: number | { id?: number } | null | undefined): string {
+  if (typeof event === 'number') {
+    return String(event)
+  }
+
+  return String(event?.id ?? '__none__')
+}
+
 export function UserEventAssignmentsSection({
   assignments,
   assignableEvents,
@@ -35,17 +45,22 @@ export function UserEventAssignmentsSection({
   canSetAdminRole,
   targetUserID,
 }: UserEventAssignmentsSectionProps) {
+  const tintedAssignments = assignGroupTints(
+    [...assignments].sort((a, b) => eventTitle(a.event).localeCompare(eventTitle(b.event))),
+    (assignment) => eventID(assignment.event),
+  )
+
   if (!canManageAssignments) {
-    return assignments.length > 0 ? (
+    return tintedAssignments.length > 0 ? (
       <div className="mt-4 rounded-2xl border px-4 py-4" style={{ borderColor: 'var(--us-border)' }}>
         <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
           Event access
         </p>
         <TruncatedList as="ul" className="mt-3" itemLabel="assignments" listClassName="space-y-2 text-sm" >
-          {assignments.map((assignment) => (
-            <li key={assignment.id} style={{ color: 'var(--us-muted)' }}>
+          {tintedAssignments.map((assignment) => (
+            <ListGroupRow as="li" key={assignment.id} rowTint={assignment.rowTint} style={{ color: 'var(--us-muted)' }}>
               {eventTitle(assignment.event)} · <span className="capitalize">{assignment.roleForEvent}</span>
-            </li>
+            </ListGroupRow>
           ))}
         </TruncatedList>
       </div>
@@ -61,10 +76,15 @@ export function UserEventAssignmentsSection({
         Assign this user to events and set moderator permissions.
       </p>
 
-      {assignments.length > 0 ? (
+      {tintedAssignments.length > 0 ? (
         <TruncatedList className="mt-4" itemLabel="assignments" listClassName="space-y-3">
-          {assignments.map((assignment) => (
-            <div key={assignment.id} className="rounded-2xl bg-white/70 px-4 py-3 text-sm" style={{ color: 'var(--us-text)' }}>
+          {tintedAssignments.map((assignment) => (
+            <ListGroupRow
+              className="rounded-2xl px-4 py-3 text-sm"
+              key={assignment.id}
+              rowTint={assignment.rowTint}
+              style={{ color: 'var(--us-text)' }}
+            >
               <p className="font-semibold">{eventTitle(assignment.event)}</p>
               <p className="mt-1 capitalize" style={{ color: 'var(--us-muted)' }}>
                 {assignment.roleForEvent} · edit {assignment.permissions?.canEditEvent ? 'yes' : 'no'} · channels{' '}
@@ -83,7 +103,7 @@ export function UserEventAssignmentsSection({
                   Remove
                 </ConfirmSubmitButton>
               </form>
-            </div>
+            </ListGroupRow>
           ))}
         </TruncatedList>
       ) : (

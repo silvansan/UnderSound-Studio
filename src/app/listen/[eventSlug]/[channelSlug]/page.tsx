@@ -5,7 +5,14 @@ import { Layout } from '@/components/Layout'
 import { ListenerConnectPanel } from '@/components/ListenerConnectPanel'
 import { getListenerSessionCookieName, verifyListenerSessionToken } from '@/lib/listener-password'
 import { formatEventChannelTitle } from '@/lib/branding'
+import { getRequestBaseUrl } from '@/lib/links'
 import { getPublicChannelContext, isListenerPubliclyAvailable } from '@/lib/public-channel'
+import {
+  buildHlsManifestUrl,
+  resolveHlsPlaylistName,
+  resolveHlsPublicBaseUrl,
+} from '@/lib/streaming/build-hls-url'
+import { resolveChannelStreamInfo } from '@/lib/streaming/resolve-channel-stream'
 
 type PageProps = {
   params: Promise<{ eventSlug: string; channelSlug: string }>
@@ -28,10 +35,28 @@ export default async function ListenPage({ params }: PageProps) {
   const listenerAvailable = context ? isListenerPubliclyAvailable(context) : true
   const eventTitle = context?.event.title ?? eventSlug
   const channelName = context?.channel.name ?? channelSlug
-  const languageLabel = context?.channel.languageLabel ?? context?.channel.languageCode ?? context?.event.defaultLanguage
   const cookieStore = await cookies()
   const listenerSession = cookieStore.get(getListenerSessionCookieName(eventSlug, channelSlug))?.value
   const hasListenerSession = verifyListenerSessionToken(eventSlug, channelSlug, listenerSession)
+  const requestBaseUrl = await getRequestBaseUrl()
+  const streamInfo = context
+    ? resolveChannelStreamInfo({
+        channel: context.channel,
+        event: context.event,
+        preferSafariCompatibility: true,
+        requestBaseUrl,
+        settings: context.settings,
+      })
+    : null
+  const hlsCandidateUrl =
+    context?.channel.hlsEnabled === true
+      ? buildHlsManifestUrl(
+          eventSlug,
+          channelSlug,
+          resolveHlsPublicBaseUrl(context.settings, requestBaseUrl),
+          resolveHlsPlaylistName(context.settings),
+        )
+      : null
 
   return (
     <Layout hideHeader requireAuth={false} title="Listen">
@@ -49,21 +74,20 @@ export default async function ListenPage({ params }: PageProps) {
                 {channelName}
               </h2>
             </div>
-            <h3 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
-              Connect to the live channel
+            <h3 className="mt-4 text-xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
+              Choose how to listen
             </h3>
-            {languageLabel ? (
-              <p className="mt-2 text-sm font-medium" style={{ color: 'var(--us-blue-dark)' }}>
-                Language: {languageLabel}
-              </p>
-            ) : null}
             {listenerAvailable ? (
               <ListenerConnectPanel
                 channelName={channelName}
                 channelSlug={channelSlug}
                 eventSlug={eventSlug}
-                fallbackUrl={context?.channel.icecastFallbackUrl}
+                eventTitle={eventTitle}
+                fallbackUrl={streamInfo?.fallbackUrl}
                 hasListenerSession={hasListenerSession}
+                hlsEnabled={context?.channel.hlsEnabled}
+                hlsEgressStatus={streamInfo?.hlsEgressStatus ?? null}
+                hlsUrl={streamInfo?.hlsUrl ?? hlsCandidateUrl}
                 listenerPasswordEnabled={context?.event.listenerPasswordEnabled}
                 listenerTokenMode={context?.channel.listenerTokenMode}
                 webrtcEnabled={context?.channel.webrtcEnabled}

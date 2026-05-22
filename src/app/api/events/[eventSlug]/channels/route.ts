@@ -2,6 +2,8 @@ import configPromise from '@payload-config'
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
+import { resolvePublicLanguageFields } from '@/lib/channel-identity'
+
 type RouteContext = {
   params: Promise<{ eventSlug: string }>
 }
@@ -52,19 +54,23 @@ export async function GET(_request: Request, { params }: RouteContext) {
   })
 
   return NextResponse.json({
-    channels: channels.docs.map((channel) => ({
-      description: channel.description,
-      hlsEnabled: channel.hlsEnabled,
-      icecastFallbackUrl: channel.icecastFallbackUrl,
-      languageCode: channel.languageCode,
-      languageLabel: channel.languageLabel,
-      listenerPageEnabled: channel.listenerPageEnabled,
-      listenerTokenMode: channel.listenerTokenMode,
-      name: channel.name,
-      slug: channel.slug,
-      speakerPageEnabled: channel.speakerPageEnabled,
-      webrtcEnabled: channel.webrtcEnabled,
-    })),
+    channels: channels.docs.map((channel) => {
+      const publicLanguage = resolvePublicLanguageFields(channel)
+
+      return {
+        description: channel.description,
+        hlsEnabled: channel.hlsEnabled,
+        icecastFallbackUrl: channel.icecastFallbackUrl,
+        languageCode: publicLanguage.languageCode,
+        languageLabel: publicLanguage.languageLabel,
+        listenerPageEnabled: channel.listenerPageEnabled,
+        listenerTokenMode: channel.listenerTokenMode,
+        name: channel.name,
+        slug: channel.slug,
+        speakerPageEnabled: channel.speakerPageEnabled,
+        webrtcEnabled: channel.webrtcEnabled,
+      }
+    }),
     event: {
       defaultLanguage: event.defaultLanguage,
       publicListenerEnabled: event.publicListenerEnabled,

@@ -104,12 +104,16 @@ export function MinusIcon({ className = 'h-4 w-4' }: IconProps) {
 }
 
 export function IconActionLink({
+  appearance = 'default',
   children,
+  clusterVariant = 'listener',
   href,
   icon,
   target,
 }: {
+  appearance?: 'cluster-inner' | 'default'
   children: string
+  clusterVariant?: 'listener' | 'speaker'
   href: string
   icon: 'open' | 'qr'
   target?: '_blank'
@@ -117,8 +121,13 @@ export function IconActionLink({
   const Icon = icon === 'qr' ? QRCodeIcon : OpenLinkIcon
 
   const className =
-    'inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white/80 transition hover:-translate-y-0.5 hover:shadow-md'
-  const style = { borderColor: 'var(--us-border)', color: 'var(--us-blue-dark)' }
+    appearance === 'cluster-inner'
+      ? `us-route-cluster-inner-btn us-route-cluster-inner-btn-${clusterVariant}`
+      : 'inline-flex h-9 w-9 items-center justify-center rounded-full border bg-white/80 transition hover:-translate-y-0.5 hover:shadow-md'
+  const style =
+    appearance === 'cluster-inner'
+      ? undefined
+      : { borderColor: 'var(--us-border)', color: 'var(--us-blue-dark)' }
 
   if (target === '_blank') {
     return (

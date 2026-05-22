@@ -1,25 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { inviteUserAction } from '@/app/users/actions'
 import { SideDrawer } from '@/components/SideDrawer'
 import type { Organization } from '@/payload-types'
 
+const CREATE_ORGANIZATION_VALUE = 'new'
+
 type InviteUserPanelProps = {
+  canCreateOrganization?: boolean
   canInviteAdmin: boolean
   defaultOrganizationId?: number
+  hideOrganizationSelector?: boolean
   organizations: Organization[]
 }
 
-export function InviteUserPanel({ canInviteAdmin, defaultOrganizationId, organizations }: InviteUserPanelProps) {
+export function InviteUserPanel({
+  canCreateOrganization = false,
+  canInviteAdmin,
+  defaultOrganizationId,
+  hideOrganizationSelector = false,
+  organizations,
+}: InviteUserPanelProps) {
   const [open, setOpen] = useState(false)
+  const resolvedDefaultOrganizationId =
+    defaultOrganizationId ?? organizations[0]?.id ?? CREATE_ORGANIZATION_VALUE
+  const [organizationChoice, setOrganizationChoice] = useState(String(resolvedDefaultOrganizationId))
+  const isCreatingOrganization = organizationChoice === CREATE_ORGANIZATION_VALUE
 
-  if (organizations.length === 0) {
+  useEffect(() => {
+    if (open) {
+      setOrganizationChoice(String(resolvedDefaultOrganizationId))
+    }
+  }, [open, resolvedDefaultOrganizationId])
+
+  if (organizations.length === 0 && !canCreateOrganization) {
     return null
   }
-
-  const resolvedDefaultOrganizationId = defaultOrganizationId ?? organizations[0]?.id
 
   return (
     <>
@@ -53,22 +71,42 @@ export function InviteUserPanel({ canInviteAdmin, defaultOrganizationId, organiz
               type="email"
             />
           </label>
-          <label className="block text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--us-muted)' }}>
-            Organization
-            <select
-              className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-              defaultValue={resolvedDefaultOrganizationId}
-              name="organizationId"
-              required
-              style={{ borderColor: 'var(--us-border)' }}
-            >
-              {organizations.map((organization) => (
-                <option key={organization.id} value={organization.id}>
-                  {organization.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {hideOrganizationSelector ? (
+            <input name="organizationId" type="hidden" value={resolvedDefaultOrganizationId} />
+          ) : (
+            <label className="block text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--us-muted)' }}>
+              Organization
+              <select
+                className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
+                name="organizationId"
+                onChange={(event) => setOrganizationChoice(event.target.value)}
+                required
+                style={{ borderColor: 'var(--us-border)' }}
+                value={organizationChoice}
+              >
+                {canCreateOrganization ? (
+                  <option value={CREATE_ORGANIZATION_VALUE}>Create new organization...</option>
+                ) : null}
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {isCreatingOrganization ? (
+            <label className="block text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--us-muted)' }}>
+              New organization name
+              <input
+                className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
+                name="newOrganizationName"
+                placeholder="e.g. Riverside Community Church"
+                required
+                style={{ borderColor: 'var(--us-border)' }}
+              />
+            </label>
+          ) : null}
           <label className="block text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--us-muted)' }}>
             Org role
             <select

@@ -255,6 +255,10 @@ export interface Event {
   location?: string | null;
   defaultLanguage?: string | null;
   publicListenerEnabled?: boolean | null;
+  /**
+   * Allow one listener QR for the whole event (channel picker).
+   */
+  unifiedListenerQrEnabled?: boolean | null;
   listenerPasswordEnabled?: boolean | null;
   listenerPasswordHash?: string | null;
   /**
@@ -268,11 +272,11 @@ export interface Event {
   speakerPassword?: string | null;
   speakerPasswordHash?: string | null;
   /**
-   * Derived from event assignments.
+   * Users with event assignment role Admin (derived automatically).
    */
   assignedAdmins?: (number | User)[] | null;
   /**
-   * Derived from event assignments.
+   * Users with event assignment role Moderator (derived automatically).
    */
   assignedModerators?: (number | User)[] | null;
   /**
@@ -308,7 +312,13 @@ export interface Channel {
   event: number | Event;
   name: string;
   slug: string;
+  /**
+   * Legacy field. Studio uses channel name as the display label.
+   */
   languageCode?: string | null;
+  /**
+   * Legacy field. Studio uses channel name as the display label.
+   */
   languageLabel?: string | null;
   description?: string | null;
   enabled?: boolean | null;
@@ -324,6 +334,12 @@ export interface Channel {
   webrtcEnabled?: boolean | null;
   hlsEnabled?: boolean | null;
   icecastFallbackUrl?: string | null;
+  /**
+   * Auto-generated HLS manifest URL when egress is active.
+   */
+  hlsPlaybackUrl?: string | null;
+  hlsEgressStatus?: ('idle' | 'starting' | 'live' | 'error') | null;
+  hlsEgressId?: string | null;
   audioQuality?: {
     echoCancellation?: boolean | null;
     noiseSuppression?: boolean | null;
@@ -586,6 +602,7 @@ export interface EventsSelect<T extends boolean = true> {
   location?: T;
   defaultLanguage?: T;
   publicListenerEnabled?: T;
+  unifiedListenerQrEnabled?: T;
   listenerPasswordEnabled?: T;
   listenerPasswordHash?: T;
   listenerPassword?: T;
@@ -637,6 +654,9 @@ export interface ChannelsSelect<T extends boolean = true> {
   webrtcEnabled?: T;
   hlsEnabled?: T;
   icecastFallbackUrl?: T;
+  hlsPlaybackUrl?: T;
+  hlsEgressStatus?: T;
+  hlsEgressId?: T;
   audioQuality?:
     | T
     | {
@@ -744,6 +764,15 @@ export interface SiteSetting {
   defaultTokenExpiry?: number | null;
   livekitPublicUrl?: string | null;
   defaultQrStyle?: ('ablaut-default' | 'high-contrast') | null;
+  /**
+   * Public base URL for generated HLS manifests, e.g. https://app.example.com/hls
+   */
+  hlsPublicBaseUrl?: string | null;
+  hlsMode?: ('standard' | 'low-latency') | null;
+  /**
+   * Segment duration in seconds. Use 1–2 for low-latency mode.
+   */
+  hlsSegmentDuration?: number | null;
   defaultThemeColors?: {
     greenDark?: string | null;
     green?: string | null;
@@ -771,6 +800,9 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   defaultTokenExpiry?: T;
   livekitPublicUrl?: T;
   defaultQrStyle?: T;
+  hlsPublicBaseUrl?: T;
+  hlsMode?: T;
+  hlsSegmentDuration?: T;
   defaultThemeColors?:
     | T
     | {

@@ -4,13 +4,18 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 
+import { canManageChannels } from '@/app/events/[eventSlug]/channels/actions'
 import { ChannelRow } from '@/components/ChannelRow'
+import { IconActionLink } from '@/components/ActionIcons'
+import { RouteActionCluster } from '@/components/RouteActionCluster'
 import { TruncatedList } from '@/components/TruncatedList'
 import { EventSettingsDrawer } from '@/components/EventSettingsDrawer'
 import { Layout } from '@/components/Layout'
 import { requireAppUser } from '@/lib/app-auth'
 import { getDashboardChannels, getDashboardEvent } from '@/lib/dashboard-data'
-import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
+import { assignGroupTints } from '@/lib/list-group-tints'
+import { getEventListenerUrl, getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
+import { getManageableOrganizations } from '@/lib/organization-data'
 import { isAdminUser } from '@/lib/permissions'
 import { generateQrDataUrl } from '@/lib/qrcode'
 
@@ -33,7 +38,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function EventDetailPage({ params, searchParams }: PageProps) {
   const { eventSlug } = await params
   const { settings } = await searchParams
-  const [event, channels] = await Promise.all([getDashboardEvent(eventSlug), getDashboardChannels(eventSlug)])
+  const [event, channels, organizations] = await Promise.all([
+    getDashboardEvent(eventSlug),
+    getDashboardChannels(eventSlug),
+    getManageableOrganizations(),
+  ])
 
   if (!event) {
     notFound()
@@ -78,8 +87,14 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
   }
 
   const publicBaseUrl = await getRequestBaseUrl()
+  const canDeleteChannels = await canManageChannels(payload, user, event.id)
+  const eventListenerUrl = getEventListenerUrl(eventSlug, publicBaseUrl)
+  const eventListenerQrDataUrl =
+    fullEvent.unifiedListenerQrEnabled === true ? await generateQrDataUrl(eventListenerUrl) : null
+  const sortedChannels = [...channels].sort((a, b) => a.name.localeCompare(b.name))
+  const tintedChannels = assignGroupTints(sortedChannels, () => eventSlug)
   const channelRows = await Promise.all(
-    channels.map(async (channel) => {
+    tintedChannels.map(async (channel) => {
       const listenerUrl = getListenerUrl(eventSlug, channel.slug, publicBaseUrl)
       const speakerUrl = getSpeakerUrl(eventSlug, channel.slug, publicBaseUrl)
       const [listenerQrDataUrl, speakerQrDataUrl] = await Promise.all([
@@ -91,6 +106,7 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
         channel,
         listenerQrDataUrl,
         listenerUrl,
+        rowTint: channel.rowTint,
         speakerQrDataUrl,
         speakerUrl,
       }
@@ -125,7 +141,36 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
           canManageAssignments={canManageAssignments}
           defaultOpen={settings === 'open'}
           event={fullEvent}
+          organizations={organizations}
         />
+
+        {fullEvent.unifiedListenerQrEnabled ? (
+          <article className="us-panel px-5 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+              Event listener QR
+            </p>
+            <p className="mt-2 text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
+              Print this QR when you want one code for all channels. Listeners choose a channel after scanning.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {eventListenerQrDataUrl ? (
+                <RouteActionCluster
+                  openLabel="Open event listener page"
+                  qrDataUrl={eventListenerQrDataUrl}
+                  qrFileName={`${eventSlug}-event-listener.png`}
+                  qrLabel={`${event.title} listener directory`}
+                  qrTriggerLabel="Show event listener QR"
+                  url={eventListenerUrl}
+                  variant="listener"
+                />
+              ) : (
+                <IconActionLink href={eventListenerUrl} icon="open" target="_blank">
+                  Open event listener page
+                </IconActionLink>
+              )}
+            </div>
+          </article>
+        ) : null}
 
         <article className="us-panel px-5 py-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -138,28 +183,27 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
           </div>
 
           {channelRows.length > 0 ? (
-            <div className="mt-5 overflow-x-auto">
-              <TruncatedList as="ul" itemLabel="channels" listClassName="min-w-[840px] space-y-2">
-                {channelRows.map((item) => (
+            <TruncatedList as="ul" className="mt-5" itemLabel="channels" listClassName="space-y-2">
+              {channelRows.map((item) => (
                   <ChannelRow
+                    canDelete={canDeleteChannels}
                     channelId={item.channel.id}
                     description={item.channel.description}
                     enabled={item.channel.enabled}
                     eventSlug={eventSlug}
                     key={item.channel.slug}
-                    languageLabel={item.channel.languageLabel || item.channel.languageCode}
                     listenerPageEnabled={item.channel.listenerPageEnabled}
                     listenerQrDataUrl={item.listenerQrDataUrl}
                     listenerUrl={item.listenerUrl}
                     name={item.channel.name}
+                    rowTint={item.rowTint}
                     slug={item.channel.slug}
                     speakerPageEnabled={item.channel.speakerPageEnabled}
                     speakerQrDataUrl={item.speakerQrDataUrl}
                     speakerUrl={item.speakerUrl}
                   />
                 ))}
-              </TruncatedList>
-            </div>
+            </TruncatedList>
           ) : (
             <div className="mt-5 rounded-2xl border bg-white/70 px-4 py-5" style={{ borderColor: 'var(--us-border)' }}>
               <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>

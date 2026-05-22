@@ -34,26 +34,15 @@ export function ChannelForm({
 
       {!isAdvanced ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
-              Name
-              <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.name ?? ''} name="name" required style={{ borderColor: 'var(--us-border)' }} />
-            </label>
-            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
-              Slug
-              <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.slug ?? ''} name="slug" style={{ borderColor: 'var(--us-border)' }} />
-            </label>
-          </div>
+          <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
+            Channel name
+            <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.name ?? ''} name="name" required style={{ borderColor: 'var(--us-border)' }} />
+            <span className="mt-2 block text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
+              The URL slug is created from the name when the channel is first saved.
+            </span>
+          </label>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
-              Language code
-              <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.languageCode ?? ''} name="languageCode" style={{ borderColor: 'var(--us-border)' }} />
-            </label>
-            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
-              Language label
-              <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.languageLabel ?? ''} name="languageLabel" style={{ borderColor: 'var(--us-border)' }} />
-            </label>
+          <div className="grid gap-4 md:grid-cols-2">
             <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
               Sort order
               <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.sortOrder ?? 0} name="sortOrder" style={{ borderColor: 'var(--us-border)' }} type="number" />
@@ -68,12 +57,13 @@ export function ChannelForm({
       ) : (
         <>
           <input name="description" type="hidden" value={channel?.description ?? ''} />
-          <input name="languageCode" type="hidden" value={channel?.languageCode ?? ''} />
-          <input name="languageLabel" type="hidden" value={channel?.languageLabel ?? ''} />
           <input name="sortOrder" type="hidden" value={channel?.sortOrder ?? 0} />
           <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
             URL slug
             <input className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue={channel?.slug ?? ''} name="slug" style={{ borderColor: 'var(--us-border)' }} />
+            <span className="mt-2 block text-xs leading-5" style={{ color: 'var(--us-muted)' }}>
+              Changing the slug breaks existing QR codes, bookmarks, and listener sessions.
+            </span>
           </label>
         </>
       )}
@@ -119,7 +109,7 @@ export function ChannelForm({
           ['listenerPageEnabled', 'Listener page enabled', channel?.listenerPageEnabled ?? true],
           ['speakerPageEnabled', 'Speaker page enabled', channel?.speakerPageEnabled ?? true],
           ['webrtcEnabled', 'WebRTC enabled', channel?.webrtcEnabled ?? true],
-          ['hlsEnabled', 'HLS enabled', channel?.hlsEnabled ?? false],
+          ['hlsEnabled', 'LL-HLS enabled', channel?.hlsEnabled ?? true],
         ].map(([name, label, checked]) => (
           <label key={String(name)} className="flex items-start gap-3 rounded-2xl bg-white/70 px-4 py-3 text-sm" style={{ color: 'var(--us-text)' }}>
             <input className="mt-1" defaultChecked={Boolean(checked)} name={String(name)} type="checkbox" />

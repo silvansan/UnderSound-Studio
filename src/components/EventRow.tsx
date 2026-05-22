@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 
 import { deleteEventAction } from '@/app/events/actions'
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
+import { rowTintClass, type ListRowTint } from '@/lib/list-group-tints'
 
 type EventRowProps = {
   canDelete?: boolean
@@ -12,6 +13,8 @@ type EventRowProps = {
   description?: string | null
   eventId: number
   location?: string | null
+  organizationTitle?: string | null
+  rowTint?: ListRowTint
   slug: string
   status?: string | null
   title: string
@@ -35,6 +38,8 @@ export function EventRow({
   description,
   eventId,
   location,
+  organizationTitle,
+  rowTint = 'white',
   slug,
   status,
   title,
@@ -50,7 +55,7 @@ export function EventRow({
 
   return (
     <li
-      className="grid cursor-pointer gap-3 rounded-2xl border bg-white/75 px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[1.3fr_1fr_120px_88px] lg:items-center"
+      className={`us-data-row us-data-row--cols-4 cursor-pointer rounded-2xl border px-4 py-4 transition hover:-translate-y-0.5 hover:shadow-md ${rowTintClass(rowTint)}`}
       onClick={openRow}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -62,7 +67,7 @@ export function EventRow({
       style={{ borderColor: 'var(--us-border)' }}
       tabIndex={0}
     >
-      <div>
+      <div className="us-data-row__lead">
         <span className="font-semibold" style={{ color: 'var(--us-green-dark)' }}>
           {title}
         </span>
@@ -71,20 +76,25 @@ export function EventRow({
             {description}
           </p>
         ) : null}
+        {organizationTitle ? (
+          <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em]" style={{ color: 'var(--us-blue-dark)' }}>
+            {organizationTitle}
+          </p>
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="us-data-row__chips">
         {status ? <span className="us-chip us-chip-muted capitalize">{status}</span> : null}
         <span className="us-chip us-chip-blue">
           {channelCount} {channelCount === 1 ? 'channel' : 'channels'}
         </span>
       </div>
 
-      <div className="text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
+      <div className="us-data-row__detail text-sm leading-6" style={{ color: 'var(--us-muted)' }}>
         {location || formattedDate || 'No date'}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 lg:justify-end" onClick={(event) => event.stopPropagation()}>
+      <div className="us-data-row__actions" onClick={(event) => event.stopPropagation()}>
         {canDelete ? (
           <form action={deleteEventAction} id={deleteFormId}>
             <input name="id" type="hidden" value={eventId} />

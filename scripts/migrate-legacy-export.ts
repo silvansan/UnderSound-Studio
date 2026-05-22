@@ -356,7 +356,7 @@ async function importChannel(oldChannel: OldChannel, event: ImportedEventRef) {
     description: stringValue(oldChannel.description),
     enabled: booleanValue(oldChannel.enabled, true),
     event: event.id,
-    hlsEnabled: booleanValue(oldChannel.hlsEnabled, false),
+    hlsEnabled: booleanValue(oldChannel.hlsEnabled, true),
     icecastFallbackUrl: stringValue(oldChannel.icecastFallbackUrl),
     languageCode: stringValue(oldChannel.languageCode),
     languageLabel: stringValue(oldChannel.languageLabel),

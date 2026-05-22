@@ -16,6 +16,24 @@ function isLocalNetworkHost(host: string): boolean {
   )
 }
 
+function resolveProtocolForHost(host: string, forwardedProto?: string | null): string {
+  if (forwardedProto) {
+    return forwardedProto
+  }
+
+  return isLocalNetworkHost(host) ? 'http' : 'https'
+}
+
+export function getRequestBaseUrlFromRequest(request: Request): string | null {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host')
+
+  if (!host) {
+    return null
+  }
+
+  return `${resolveProtocolForHost(host, request.headers.get('x-forwarded-proto'))}://${host}`
+}
+
 export async function getRequestBaseUrl(): Promise<string> {
   const requestHeaders = await headers()
   const host = requestHeaders.get('x-forwarded-host') || requestHeaders.get('host')
@@ -24,13 +42,17 @@ export async function getRequestBaseUrl(): Promise<string> {
     return configuredBaseUrl()
   }
 
-  const protocol = requestHeaders.get('x-forwarded-proto') || (isLocalNetworkHost(host) ? 'http' : 'https')
+  const protocol = resolveProtocolForHost(host, requestHeaders.get('x-forwarded-proto'))
 
   return `${protocol}://${host}`
 }
 
 export function getListenerUrl(eventSlug: string, channelSlug: string, baseUrl = configuredBaseUrl()): string {
   return `${baseUrl}/listen/${eventSlug}/${channelSlug}`
+}
+
+export function getEventListenerUrl(eventSlug: string, baseUrl = configuredBaseUrl()): string {
+  return `${baseUrl}/listen/${eventSlug}`
 }
 
 export function getSpeakerUrl(eventSlug: string, channelSlug: string, baseUrl = configuredBaseUrl()): string {

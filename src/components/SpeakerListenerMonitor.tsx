@@ -1,7 +1,9 @@
 'use client'
 
 import { Room, RoomEvent, Track, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication } from 'livekit-client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { LiveAudioPlayerShell } from '@/components/LiveAudioPlayerShell'
 
 type SpeakerListenerMonitorProps = {
   channelName: string
@@ -26,43 +28,71 @@ export function SpeakerListenerMonitor({
   fallbackUrl,
   webrtcEnabled,
 }: SpeakerListenerMonitorProps) {
-  const audioContainerRef = useRef<HTMLDivElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const attachedTrackRef = useRef<RemoteTrack | null>(null)
   const roomRef = useRef<Room | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [state, setState] = useState<MonitorState>('idle')
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isBuffering, setIsBuffering] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const showPlayer = state === 'connecting' || state === 'connected'
 
-  useEffect(() => {
-    const audioContainer = audioContainerRef.current
+  const syncPlaybackState = useCallback(() => {
+    const audio = audioRef.current
 
-    return () => {
-      roomRef.current?.disconnect()
-      roomRef.current = null
-      audioContainer?.replaceChildren()
-    }
-  }, [])
-
-  function attachAudioTrack(track: RemoteTrack) {
-    if (track.kind !== Track.Kind.Audio || !audioContainerRef.current) {
+    if (!audio) {
       return
     }
 
-    const element = track.attach()
-    element.autoplay = true
-    element.controls = true
-    element.className = 'mt-3 w-full'
-    audioContainerRef.current.append(element)
-    setState('connected')
-    setMessage(`Monitoring listener audio for ${channelName}.`)
+    setIsPlaying(!audio.paused && !audio.ended)
+    setIsMuted(audio.muted)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      detachAudioTrack()
+      roomRef.current?.disconnect()
+      roomRef.current = null
+    }
+  }, [])
+
+  function detachAudioTrack() {
+    if (attachedTrackRef.current) {
+      attachedTrackRef.current.detach()
+      attachedTrackRef.current = null
+    }
+
+    const audio = audioRef.current
+
+    if (audio) {
+      audio.pause()
+      audio.srcObject = null
+      audio.load()
+    }
+
+    setIsPlaying(false)
+    setIsBuffering(false)
   }
 
-  function attachExistingAudio(room: Room) {
-    room.remoteParticipants.forEach((participant) => {
-      participant.trackPublications.forEach((publication) => {
-        if (publication.track) {
-          attachAudioTrack(publication.track)
-        }
-      })
-    })
+  function attachAudioTrack(track: RemoteTrack, participant: RemoteParticipant) {
+    if (track.kind !== Track.Kind.Audio || !participant.identity.startsWith('speaker_')) {
+      return
+    }
+
+    const audio = audioRef.current
+
+    if (!audio || attachedTrackRef.current?.sid === track.sid) {
+      return
+    }
+
+    detachAudioTrack()
+    attachedTrackRef.current = track
+    track.attach(audio)
+    void audio.play().catch(() => {})
+    setState('connected')
+    setMessage(`Monitoring listener audio for ${channelName}.`)
+    syncPlaybackState()
   }
 
   async function startMonitor() {
@@ -72,7 +102,9 @@ export function SpeakerListenerMonitor({
       return
     }
 
+    stopMonitor(false)
     setState('connecting')
+    setIsBuffering(true)
     setMessage('Connecting to the listener feed...')
 
     const response = await fetch('/api/livekit/listener-token', {
@@ -86,14 +118,12 @@ export function SpeakerListenerMonitor({
 
     if (!response.ok || !tokenResponse?.token || !tokenResponse.url) {
       setState(response.status === 403 ? 'unavailable' : 'error')
+      setIsBuffering(false)
       setMessage(tokenResponse?.error ?? 'Unable to connect to the listener feed right now.')
       return
     }
 
     try {
-      roomRef.current?.disconnect()
-      audioContainerRef.current?.replaceChildren()
-
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
@@ -103,11 +133,12 @@ export function SpeakerListenerMonitor({
       room
         .on(
           RoomEvent.TrackSubscribed,
-          (track: RemoteTrack, _publication: RemoteTrackPublication, _participant: RemoteParticipant) => {
-            attachAudioTrack(track)
+          (track: RemoteTrack, _publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+            attachAudioTrack(track, participant)
           },
         )
         .on(RoomEvent.Disconnected, () => {
+          detachAudioTrack()
           setState('idle')
           setMessage('Stopped monitoring the listener feed.')
         })
@@ -115,23 +146,36 @@ export function SpeakerListenerMonitor({
       await room.connect(tokenResponse.url, tokenResponse.token, {
         autoSubscribe: true,
       })
-      attachExistingAudio(room)
+
+      for (const participant of room.remoteParticipants.values()) {
+        for (const publication of participant.trackPublications.values()) {
+          if (publication.track) {
+            attachAudioTrack(publication.track, participant)
+            break
+          }
+        }
+      }
+
       setState('connected')
       setMessage(`Connected to ${channelName}. Waiting for live audio if no player appears yet.`)
     } catch (error) {
       console.error('Speaker listener monitor failed', error)
       const errorMessage = error instanceof Error ? error.message : null
       setState('error')
+      setIsBuffering(false)
       setMessage(errorMessage ? `Listener monitor failed: ${errorMessage}` : 'Listener monitor failed.')
     }
   }
 
-  function stopMonitor() {
+  function stopMonitor(updateMessage = true) {
+    detachAudioTrack()
     roomRef.current?.disconnect()
     roomRef.current = null
-    audioContainerRef.current?.replaceChildren()
     setState('idle')
-    setMessage('Stopped monitoring the listener feed.')
+
+    if (updateMessage) {
+      setMessage('Stopped monitoring the listener feed.')
+    }
   }
 
   return (
@@ -145,7 +189,7 @@ export function SpeakerListenerMonitor({
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         {state === 'connected' ? (
-          <button type="button" className="us-button-primary px-4 py-2.5 text-sm font-medium" onClick={stopMonitor}>
+          <button type="button" className="us-button-primary px-4 py-2.5 text-sm font-medium" onClick={() => stopMonitor()}>
             Stop listening
           </button>
         ) : (
@@ -169,7 +213,40 @@ export function SpeakerListenerMonitor({
           {message}
         </p>
       ) : null}
-      <div ref={audioContainerRef} />
+
+      <audio ref={audioRef} className="hidden" playsInline preload="auto" />
+
+      {showPlayer ? (
+        <LiveAudioPlayerShell
+          disabled={state === 'connecting'}
+          isBuffering={isBuffering}
+          isMuted={isMuted}
+          isPlaying={isPlaying}
+          label="Live"
+          mode={`Monitoring ${channelName}`}
+          onToggleMute={() => {
+            const audio = audioRef.current
+            if (audio) {
+              audio.muted = !audio.muted
+              setIsMuted(audio.muted)
+            }
+          }}
+          onTogglePlayback={() => {
+            const audio = audioRef.current
+            if (!audio) {
+              return
+            }
+
+            if (audio.paused) {
+              void audio.play()
+            } else {
+              audio.pause()
+            }
+
+            syncPlaybackState()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

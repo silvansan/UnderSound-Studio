@@ -29,6 +29,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
+.env.*
+!.env.example
 .env*.local
 
 # vercel
@@ -38,10 +41,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.env
-
+# runtime / generated local data
 /media
 /data
+/hls-segments/
 
 # Playwright
 node_modules/
@@ -51,15 +54,25 @@ node_modules/
 /playwright/.cache/
 
 # --- Internal / agent-only (do not publish) ---
+AGENTS.md
 MOBILE_ABLAUT_REBRAND.md
 docs/MOBILE_AGENT_HANDOFF.md
 
 # Brand source masters (optional: commit only if you want masters public)
 /brand/
 
-# Local migration / backup exports
+# Local progress / notes (not tracked)
+.local/
+*.local.md
+*reasoning*
+*.reasoning.md
+SCRATCH*
+*.scratch.md
+
+# Cursor IDE local state
+.cursor/
+
 legacy-export.json
 *-backup.sql
 *.sql.gz
-ablaut_uploads.tgz
 ablaut_uploads.tgz

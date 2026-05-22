@@ -18,6 +18,22 @@ Compatibility redirect:
 /listener/:eventSlug/:channelSlug -> /listen/:eventSlug/:channelSlug
 ```
 
+Event listener directory (one QR for all channels):
+
+```text
+/listen/:eventSlug
+```
+
+Enable on the event with **Allow one listener QR for the whole event (channel picker)** (`unifiedListenerQrEnabled`). Requires event status **active**, public listener pages enabled, and at least one non-private listener channel.
+
+Public API:
+
+```text
+GET /api/public/listen/:eventSlug
+```
+
+Event-wide listener password (optional): `POST /api/listener/verify-password` with `{ "directory": true, "eventSlug", "password" }`. Pass returned `listenerSessionToken` as `eventListenerSessionToken` when requesting channel tokens.
+
 ## Stable Speaker Links
 
 Primary speaker URL:
@@ -37,6 +53,7 @@ Compatibility redirect:
 Mobile-safe public endpoints:
 
 - `GET /api/public/listen/:eventSlug/:channelSlug`
+- `GET /api/public/listen/:eventSlug` (event directory when `unifiedListenerQrEnabled` is on)
 - `GET /api/events/:eventSlug/channels`
 
 These return only public event/channel fields. They must not return:

@@ -76,6 +76,38 @@ export const SiteSettings: GlobalConfig = {
           ],
         },
         {
+          label: 'LL-HLS fallback',
+          fields: [
+            {
+              name: 'hlsPublicBaseUrl',
+              type: 'text',
+              admin: {
+                description: 'Public base URL for generated LL-HLS manifests, e.g. https://app.example.com/hls',
+              },
+            },
+            {
+              name: 'hlsMode',
+              type: 'select',
+              defaultValue: 'low-latency',
+              options: [{ label: 'Low-latency HLS (LL-HLS)', value: 'low-latency' }],
+              admin: {
+                readOnly: true,
+                description: 'Live events always use LL-HLS. Compatibility playback stays within 1 second of live.',
+              },
+            },
+            {
+              name: 'hlsSegmentDuration',
+              type: 'number',
+              defaultValue: 1,
+              min: 1,
+              max: 1,
+              admin: {
+                description: 'Segment duration in seconds. Fixed at 1 second for sub-second live delay targets.',
+              },
+            },
+          ],
+        },
+        {
           label: 'Theme',
           fields: [
             {

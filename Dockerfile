@@ -28,4 +28,12 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "server.js"]
+COPY --from=builder /app/scripts/wait-for-postgres.mjs ./scripts/wait-for-postgres.mjs
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+USER root
+RUN sed -i 's/\r$//' /docker-entrypoint.sh \
+  && chmod +x /docker-entrypoint.sh \
+  && chown nextjs:nodejs /docker-entrypoint.sh ./scripts/wait-for-postgres.mjs
+USER nextjs
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

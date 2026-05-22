@@ -39,7 +39,19 @@ async function removeDevMigrationMarker() {
 
   try {
     await client.connect()
-    await client.query("DELETE FROM payload_migrations WHERE batch = -1 AND name = 'dev'")
+
+    const tableCheck = await client.query<{ exists: boolean }>(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name = 'payload_migrations'
+      ) AS "exists"
+    `)
+
+    if (tableCheck.rows[0]?.exists) {
+      await client.query("DELETE FROM payload_migrations WHERE batch = -1 AND name = 'dev'")
+    }
   } catch (error) {
     const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined
 

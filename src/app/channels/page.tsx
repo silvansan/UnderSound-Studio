@@ -10,6 +10,7 @@ import { TruncatedList } from '@/components/TruncatedList'
 import { Layout } from '@/components/Layout'
 import { PanelDrawer } from '@/components/PanelDrawer'
 import { getDashboardAllChannels, getDashboardEvents } from '@/lib/dashboard-data'
+import { assignGroupTints } from '@/lib/list-group-tints'
 import { getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
 import { pageMetadata } from '@/lib/branding'
 import { generateQrDataUrl } from '@/lib/qrcode'
@@ -47,8 +48,18 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
 
     return matchesEvent && matchesQuery
   })
+  const sortedChannels = [...filteredChannels].sort((a, b) => {
+    const eventCompare = a.eventTitle.localeCompare(b.eventTitle)
+
+    if (eventCompare !== 0) {
+      return eventCompare
+    }
+
+    return a.name.localeCompare(b.name)
+  })
+  const tintedChannels = assignGroupTints(sortedChannels, (channel) => channel.eventSlug)
   const channelRows = await Promise.all(
-    filteredChannels.map(async (channel) => {
+    tintedChannels.map(async (channel) => {
       const listenerUrl = getListenerUrl(channel.eventSlug, channel.slug, publicBaseUrl)
       const speakerUrl = getSpeakerUrl(channel.eventSlug, channel.slug, publicBaseUrl)
       const [listenerQrDataUrl, speakerQrDataUrl, canDelete] = await Promise.all([
@@ -114,7 +125,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
         </article>
 
         <PanelDrawer description="Create a channel without opening the event page first." title="Quick add channel">
-          <form action={createChannelAction} className="grid gap-3 lg:grid-cols-[220px_1fr_140px_1fr_auto]">
+          <form action={createChannelAction} className="grid gap-3 lg:grid-cols-[220px_1fr_auto]">
             <input name="enabled" type="hidden" value="on" />
             <input name="listenerPageEnabled" type="hidden" value="on" />
             <input name="listenerTokenMode" type="hidden" value="public" />
@@ -147,24 +158,6 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
                 style={{ borderColor: 'var(--us-border)' }}
               />
             </label>
-            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
-              Code
-              <input
-                className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-                name="languageCode"
-                placeholder="en"
-                style={{ borderColor: 'var(--us-border)' }}
-              />
-            </label>
-            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
-              Language label
-              <input
-                className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
-                name="languageLabel"
-                placeholder="English"
-                style={{ borderColor: 'var(--us-border)' }}
-              />
-            </label>
             <div className="flex items-end">
               <button className="us-button-primary px-5 py-3 text-sm font-medium" type="submit">
                 Add
@@ -173,13 +166,11 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
           </form>
         </PanelDrawer>
 
-        <article className="us-panel overflow-hidden px-4 py-4">
-          <div className="hidden grid-cols-[1.1fr_1fr_1.2fr_1.2fr_100px] gap-3 px-3 pb-3 text-xs font-semibold uppercase tracking-[0.12em] lg:grid" style={{ color: 'var(--us-muted)' }}>
-            <span>Channel</span>
-            <span>Status</span>
-            <span>Speaker</span>
-            <span>Listener</span>
-            <span />
+        <article className="us-panel px-4 py-4">
+          <div className="us-data-row us-data-row-header us-data-row--cols-3 px-4" style={{ color: 'var(--us-muted)' }}>
+            <span className="us-data-row__lead">Channel</span>
+            <span className="us-data-row__chips">Status</span>
+            <span className="us-data-row__actions">Speaker / listener links</span>
           </div>
 
           {channelRows.length === 0 ? (
@@ -196,11 +187,11 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
                   enabled={channel.enabled}
                   eventSlug={channel.eventSlug}
                   key={`${channel.eventSlug}-${channel.slug}`}
-                  languageLabel={channel.languageLabel || channel.languageCode}
                   listenerPageEnabled={channel.listenerPageEnabled}
                   listenerQrDataUrl={channel.listenerQrDataUrl}
                   listenerUrl={channel.listenerUrl}
                   name={channel.name}
+                  rowTint={channel.rowTint}
                   slug={channel.slug}
                   speakerPageEnabled={channel.speakerPageEnabled}
                   speakerQrDataUrl={channel.speakerQrDataUrl}

@@ -6,16 +6,9 @@ import { redirect } from 'next/navigation'
 import { getPayload, type Payload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
+import { resolveChannelSlugForCreate, resolveChannelSlugForUpdate } from '@/lib/channel-identity'
 import { isModeratorUser, isSuperAdminUser } from '@/lib/permissions'
 import type { User } from '@/payload-types'
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
 
 function stringValue(formData: FormData, key: string): string | undefined {
   const value = formData.get(key)
@@ -147,11 +140,9 @@ export async function createChannelAction(formData: FormData) {
       event: eventID,
       hlsEnabled: booleanValue(formData, 'hlsEnabled'),
       icecastFallbackUrl: stringValue(formData, 'icecastFallbackUrl'),
-      languageCode: stringValue(formData, 'languageCode'),
-      languageLabel: stringValue(formData, 'languageLabel'),
       listenerPageEnabled: booleanValue(formData, 'listenerPageEnabled'),
       listenerTokenMode: tokenModeValue(formData),
-      slug: slugify(stringValue(formData, 'slug') ?? name),
+      slug: resolveChannelSlugForCreate(name),
       speakerPageEnabled: booleanValue(formData, 'speakerPageEnabled'),
       speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),
@@ -203,11 +194,9 @@ export async function updateChannelAction(formData: FormData) {
       enabled: booleanValue(formData, 'enabled'),
       hlsEnabled: booleanValue(formData, 'hlsEnabled'),
       icecastFallbackUrl: stringValue(formData, 'icecastFallbackUrl'),
-      languageCode: stringValue(formData, 'languageCode'),
-      languageLabel: stringValue(formData, 'languageLabel'),
       listenerPageEnabled: booleanValue(formData, 'listenerPageEnabled'),
       listenerTokenMode: tokenModeValue(formData),
-      slug: slugify(stringValue(formData, 'slug') ?? name),
+      slug: resolveChannelSlugForUpdate(stringValue(formData, 'slug'), existingChannel.slug),
       speakerPageEnabled: booleanValue(formData, 'speakerPageEnabled'),
       speakerPassword: stringValue(formData, 'speakerPassword'),
       speakerPasswordEnabled: booleanValue(formData, 'speakerPasswordEnabled'),

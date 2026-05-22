@@ -33,6 +33,7 @@ type ExportedEvent = Pick<
   | 'listenerPasswordHash'
   | 'location'
   | 'publicListenerEnabled'
+  | 'unifiedListenerQrEnabled'
   | 'qrSettings'
   | 'slug'
   | 'speakerPasswordEnabled'
@@ -169,6 +170,7 @@ function eventConfig(event: Event): ExportedEvent {
     location: event.location,
     organizationSlug: organization?.slug,
     publicListenerEnabled: event.publicListenerEnabled,
+    unifiedListenerQrEnabled: event.unifiedListenerQrEnabled,
     qrSettings: event.qrSettings,
     slug: event.slug,
     speakerPasswordEnabled: event.speakerPasswordEnabled,
