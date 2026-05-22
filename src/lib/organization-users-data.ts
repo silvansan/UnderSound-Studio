@@ -3,14 +3,19 @@ import { getPayload } from 'payload'
 
 import { requireAppUser } from '@/lib/app-auth'
 import { getDashboardEventsForOrganization } from '@/lib/dashboard-data'
+import { getManageableOrganizations } from '@/lib/organization-data'
 import { eventTitle, userID } from '@/lib/organization-user-utils'
-import type { EventAssignment, OrganizationMembership, User } from '@/payload-types'
+import { getVisibleUserIDsForRequest } from '@/lib/organizations'
+import type { EventAssignment, Organization, OrganizationMembership, User } from '@/payload-types'
 
 export type OrganizationUsersData = {
   activeMemberships: OrganizationMembership[]
   assignableEvents: Array<{ id: number; slug: string; title: string }>
+  assignableUsers: User[]
   assignmentsByUserID: Map<number, EventAssignment[]>
+  manageableOrganizations: Organization[]
   membershipByUserID: Map<number, OrganizationMembership>
+  organizationMembershipsByUserID: Map<number, OrganizationMembership[]>
   pendingInvites: OrganizationMembership[]
   pendingRequests: OrganizationMembership[]
   users: User[]
@@ -21,7 +26,7 @@ export async function getOrganizationUsersData(organizationId: number): Promise<
   const currentUser = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
 
-  const [memberships, assignableEvents] = await Promise.all([
+  const [memberships, assignableEvents, manageableOrganizations] = await Promise.all([
     payload.find({
       collection: 'organization-memberships',
       depth: 1,
@@ -36,6 +41,7 @@ export async function getOrganizationUsersData(organizationId: number): Promise<
       },
     }),
     getDashboardEventsForOrganization(organizationId, 500),
+    getManageableOrganizations(),
   ])
 
   const pendingInvites = memberships.docs.filter(
@@ -70,6 +76,64 @@ export async function getOrganizationUsersData(organizationId: number): Promise<
           },
         })
       : { docs: [] as User[] }
+
+  const visibleAdminUserIDs = await getVisibleUserIDsForRequest({ payload, user: currentUser } as never)
+  const allVisibleUsers = await payload.find({
+    collection: 'users',
+    depth: 0,
+    limit: 500,
+    overrideAccess: false,
+    pagination: false,
+    sort: 'email',
+    user: currentUser,
+    where: visibleAdminUserIDs
+      ? {
+          id: {
+            in: visibleAdminUserIDs,
+          },
+        }
+      : undefined,
+  })
+
+  const currentOrganizationMemberUserIDs = new Set(
+    memberships.docs
+      .filter((membership) => membership.status === 'active' || membership.status === 'pending')
+      .map((membership) => userID(membership.user))
+      .filter((id): id is number => typeof id === 'number'),
+  )
+  const assignableUsers = allVisibleUsers.docs.filter((user) => !currentOrganizationMemberUserIDs.has(user.id))
+
+  const manageableOrganizationIDs = manageableOrganizations.map((organization) => organization.id)
+  const organizationMemberships =
+    visibleUserIDs.length > 0 && manageableOrganizationIDs.length > 0
+      ? await payload.find({
+          collection: 'organization-memberships',
+          depth: 1,
+          limit: 1000,
+          overrideAccess: false,
+          pagination: false,
+          user: currentUser,
+          where: {
+            and: [
+              {
+                user: {
+                  in: visibleUserIDs,
+                },
+              },
+              {
+                organization: {
+                  in: manageableOrganizationIDs,
+                },
+              },
+              {
+                status: {
+                  in: ['active', 'pending'],
+                },
+              },
+            ],
+          },
+        })
+      : { docs: [] as OrganizationMembership[] }
 
   const orgEventIDs = assignableEvents.map((event) => event.id)
   const assignments =
@@ -115,6 +179,16 @@ export async function getOrganizationUsersData(organizationId: number): Promise<
     activeMemberships.map((membership) => [userID(membership.user), membership]),
   )
 
+  const organizationMembershipsByUserID = organizationMemberships.docs.reduce((accumulator, membership) => {
+    const memberUserID = userID(membership.user)
+    const existing = accumulator.get(memberUserID) ?? []
+
+    existing.push(membership)
+    accumulator.set(memberUserID, existing)
+
+    return accumulator
+  }, new Map<number, OrganizationMembership[]>())
+
   return {
     activeMemberships,
     assignableEvents: assignableEvents.map((event) => ({
@@ -122,8 +196,11 @@ export async function getOrganizationUsersData(organizationId: number): Promise<
       slug: event.slug,
       title: event.title,
     })),
+    assignableUsers,
     assignmentsByUserID,
+    manageableOrganizations,
     membershipByUserID,
+    organizationMembershipsByUserID,
     pendingInvites,
     pendingRequests,
     userEvents,

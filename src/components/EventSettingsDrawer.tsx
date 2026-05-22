@@ -4,9 +4,19 @@ import { EventForm } from '@/components/EventForm'
 import { PanelDrawer } from '@/components/PanelDrawer'
 import type { Event, EventAssignment } from '@/payload-types'
 
+type AssignableUser = {
+  email: string
+  id: number
+  membershipStatus?: string | null
+  name: string
+  role?: string | null
+}
+
 type EventSettingsDrawerProps = {
   assignments: EventAssignment[]
+  assignableUsers: AssignableUser[]
   canManageAssignments: boolean
+  canSetAdminRole: boolean
   defaultOpen?: boolean
   event: Event
   organizations?: Array<{ id: number; name: string; slug?: string }>
@@ -14,7 +24,9 @@ type EventSettingsDrawerProps = {
 
 export function EventSettingsDrawer({
   assignments,
+  assignableUsers,
   canManageAssignments,
+  canSetAdminRole,
   defaultOpen = false,
   event,
   organizations = [],
@@ -33,7 +45,14 @@ export function EventSettingsDrawer({
           submitLabel="Save event"
           variant="drawer"
         />
-        <EventAssignmentsSection assignments={assignments} canManageAssignments={canManageAssignments} />
+        <EventAssignmentsSection
+          assignments={assignments}
+          assignableUsers={assignableUsers}
+          canManageAssignments={canManageAssignments}
+          canSetAdminRole={canSetAdminRole}
+          eventID={event.id}
+          eventSlug={event.slug}
+        />
       </div>
     </PanelDrawer>
   )

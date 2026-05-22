@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { getPayload } from 'payload'
 
 import { canManageChannels } from '@/app/events/[eventSlug]/channels/actions'
+import { canManageAssignment } from '@/app/events/[eventSlug]/settings/actions'
 import { ChannelRow } from '@/components/ChannelRow'
 import { IconActionLink } from '@/components/ActionIcons'
 import { RouteActionCluster } from '@/components/RouteActionCluster'
@@ -16,8 +17,9 @@ import { getDashboardChannels, getDashboardEvent } from '@/lib/dashboard-data'
 import { assignGroupTints } from '@/lib/list-group-tints'
 import { getEventListenerUrl, getListenerUrl, getRequestBaseUrl, getSpeakerUrl } from '@/lib/links'
 import { getManageableOrganizations } from '@/lib/organization-data'
-import { isAdminUser } from '@/lib/permissions'
+import { isSuperAdminUser } from '@/lib/permissions'
 import { generateQrDataUrl } from '@/lib/qrcode'
+import type { OrganizationMembership, User } from '@/payload-types'
 
 type PageProps = {
   params: Promise<{ eventSlug: string }>
@@ -25,6 +27,77 @@ type PageProps = {
 }
 
 export const dynamic = 'force-dynamic'
+
+type AssignableUser = {
+  email: string
+  id: number
+  membershipStatus?: string | null
+  name: string
+  role?: string | null
+}
+
+function userFromMembership(membership: OrganizationMembership): User | null {
+  return typeof membership.user === 'number' ? null : membership.user
+}
+
+async function getAssignableUsersForEvent(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  currentUser: User,
+  organizationID?: number | null,
+): Promise<AssignableUser[]> {
+  if (!organizationID) {
+    return []
+  }
+
+  const memberships = await payload.find({
+    collection: 'organization-memberships',
+    depth: 1,
+    limit: 500,
+    overrideAccess: false,
+    pagination: false,
+    sort: 'status',
+    user: currentUser,
+    where: {
+      and: [
+        {
+          organization: {
+            equals: organizationID,
+          },
+        },
+        {
+          status: {
+            in: ['active', 'pending'],
+          },
+        },
+      ],
+    },
+  })
+
+  const canAssignAnyRole = isSuperAdminUser(currentUser)
+  const usersByID = new Map<number, AssignableUser>()
+
+  for (const membership of memberships.docs) {
+    const member = userFromMembership(membership)
+
+    if (!member) {
+      continue
+    }
+
+    if (!canAssignAnyRole && member.role !== 'moderator') {
+      continue
+    }
+
+    usersByID.set(member.id, {
+      email: member.email,
+      id: member.id,
+      membershipStatus: membership.status,
+      name: member.name,
+      role: member.role,
+    })
+  }
+
+  return [...usersByID.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { eventSlug } = await params
@@ -50,8 +123,7 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
 
   const user = await requireAppUser()
   const payload = await getPayload({ config: configPromise })
-  const canManageAssignments = isAdminUser(user)
-  const [eventRecord, assignments] = await Promise.all([
+  const [eventRecord, assignments, canManageAssignments] = await Promise.all([
     payload.find({
       collection: 'events',
       depth: 0,
@@ -79,6 +151,7 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
         },
       },
     }),
+    canManageAssignment(payload, user, event.id),
   ])
   const fullEvent = eventRecord.docs[0]
 
@@ -86,6 +159,9 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
     notFound()
   }
 
+  const assignableUsers = canManageAssignments
+    ? await getAssignableUsersForEvent(payload, user, event.organizationId)
+    : []
   const publicBaseUrl = await getRequestBaseUrl()
   const canDeleteChannels = await canManageChannels(payload, user, event.id)
   const eventListenerUrl = getEventListenerUrl(eventSlug, publicBaseUrl)
@@ -138,7 +214,9 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
 
         <EventSettingsDrawer
           assignments={assignments.docs}
+          assignableUsers={assignableUsers}
           canManageAssignments={canManageAssignments}
+          canSetAdminRole={isSuperAdminUser(user)}
           defaultOpen={settings === 'open'}
           event={fullEvent}
           organizations={organizations}

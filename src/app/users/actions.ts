@@ -480,6 +480,84 @@ export async function removeMembershipAction(formData: FormData) {
   await revalidateOrganizationById(payload, organizationID)
 }
 
+export async function upsertUserOrganizationMembershipAction(formData: FormData) {
+  const currentUser = await requireAppUser()
+
+  if (!isAdminUser(currentUser)) {
+    throw new Error('Only admins can manage organization memberships.')
+  }
+
+  const organizationID = numericValue(formData, 'organizationId')
+  const targetUserID = numericValue(formData, 'userID')
+
+  if (!organizationID || !targetUserID) {
+    throw new Error('User and organization are required.')
+  }
+
+  const payload = await getPayload({ config: configPromise })
+  await assertCanManageOrganization(payload, currentUser, organizationID)
+
+  await payload.findByID({
+    id: targetUserID,
+    collection: 'users',
+    overrideAccess: false,
+    user: currentUser,
+  })
+
+  const existing = await payload.find({
+    collection: 'organization-memberships',
+    depth: 0,
+    limit: 1,
+    overrideAccess: true,
+    pagination: false,
+    user: currentUser,
+    where: {
+      and: [
+        {
+          organization: {
+            equals: organizationID,
+          },
+        },
+        {
+          user: {
+            equals: targetUserID,
+          },
+        },
+      ],
+    },
+  })
+
+  const data = {
+    approvedBy: currentUser.id,
+    organization: organizationID,
+    roleInOrganization: membershipRoleValue(formData),
+    status: 'active' as const,
+    user: targetUserID,
+  }
+
+  if (existing.docs[0]) {
+    await payload.update({
+      id: existing.docs[0].id,
+      collection: 'organization-memberships',
+      data,
+      overrideAccess: true,
+      user: currentUser,
+    })
+  } else {
+    await payload.create({
+      collection: 'organization-memberships',
+      data: {
+        ...data,
+        approvedAt: new Date().toISOString(),
+      },
+      overrideAccess: true,
+      user: currentUser,
+    })
+  }
+
+  await revalidateOrganizationById(payload, organizationID)
+}
+
 export async function deleteUserAction(formData: FormData) {
   const currentUser = await requireAppUser()
 
@@ -672,7 +750,20 @@ export async function upsertUserEventAssignmentAction(formData: FormData) {
     })
   }
 
+  const event = await payload
+    .findByID({
+      id: eventID,
+      collection: 'events',
+      depth: 0,
+      overrideAccess: true,
+      user,
+    })
+    .catch(() => null)
+
   revalidatePath('/users')
+  if (event?.slug) {
+    revalidatePath(`/events/${event.slug}`)
+  }
 }
 
 export async function deleteUserEventAssignmentAction(formData: FormData) {
@@ -704,5 +795,18 @@ export async function deleteUserEventAssignmentAction(formData: FormData) {
     user,
   })
 
+  const event = await payload
+    .findByID({
+      id: eventID,
+      collection: 'events',
+      depth: 0,
+      overrideAccess: true,
+      user,
+    })
+    .catch(() => null)
+
   revalidatePath('/users')
+  if (event?.slug) {
+    revalidatePath(`/events/${event.slug}`)
+  }
 }

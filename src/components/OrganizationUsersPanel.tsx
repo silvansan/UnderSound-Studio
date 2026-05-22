@@ -6,12 +6,14 @@ import {
   resendInviteForUserAction,
   sendPasswordResetForUserAction,
   updateUserAction,
+  upsertUserOrganizationMembershipAction,
 } from '@/app/users/actions'
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton'
 import { InviteUserPanel } from '@/components/InviteUserPanel'
 import { ListGroupRow } from '@/components/ListGroupRow'
 import { TruncatedList } from '@/components/TruncatedList'
 import { UserEventAssignmentsSection } from '@/components/UserEventAssignmentsSection'
+import { UserOrganizationMembershipsSection } from '@/components/UserOrganizationMembershipsSection'
 import { assignGroupTints, assignZebraTints, rowTintClass } from '@/lib/list-group-tints'
 import { getUserEventSummary, userID, userLabel } from '@/lib/organization-user-utils'
 import type { OrganizationUsersData } from '@/lib/organization-users-data'
@@ -27,8 +29,11 @@ type OrganizationUsersPanelProps = {
 export function OrganizationUsersPanel({ currentUser, data, organization }: OrganizationUsersPanelProps) {
   const {
     assignableEvents,
+    assignableUsers,
     assignmentsByUserID,
+    manageableOrganizations,
     membershipByUserID,
+    organizationMembershipsByUserID,
     pendingInvites,
     pendingRequests,
     userEvents,
@@ -70,6 +75,44 @@ export function OrganizationUsersPanel({ currentUser, data, organization }: Orga
           organizations={[organization]}
         />
       </div>
+
+      {assignableUsers.length > 0 ? (
+        <article className="us-panel px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>
+            Add existing user
+          </p>
+          <form action={upsertUserOrganizationMembershipAction} className="mt-4 grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end">
+            <input name="organizationId" type="hidden" value={organization.id} />
+            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
+              User
+              <select
+                className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none"
+                name="userID"
+                required
+                style={{ borderColor: 'var(--us-border)' }}
+              >
+                <option value="">Select user</option>
+                {assignableUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium" style={{ color: 'var(--us-text)' }}>
+              Org role
+              <select className="mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-base outline-none" defaultValue="moderator" name="roleInOrganization" style={{ borderColor: 'var(--us-border)' }}>
+                <option value="manager">Manager</option>
+                <option value="moderator">Moderator</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </label>
+            <button type="submit" className="us-button-secondary px-5 py-3 text-sm font-medium">
+              Add user
+            </button>
+          </form>
+        </article>
+      ) : null}
 
       {pendingRequests.length > 0 ? (
         <article className="us-panel px-6 py-6">
@@ -240,6 +283,13 @@ export function OrganizationUsersPanel({ currentUser, data, organization }: Orga
                         </button>
                       </div>
                     </form>
+
+                    <UserOrganizationMembershipsSection
+                      canManageMemberships={isAdminUser(currentUser)}
+                      memberships={organizationMembershipsByUserID.get(user.id) ?? []}
+                      organizations={manageableOrganizations}
+                      targetUserID={user.id}
+                    />
 
                     {user.role === 'moderator' || isSuperAdminUser(currentUser) ? (
                       <UserEventAssignmentsSection

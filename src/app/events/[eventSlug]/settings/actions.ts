@@ -110,6 +110,10 @@ export async function upsertEventAssignmentAction(formData: FormData) {
     throw new Error('Event and user are required.')
   }
 
+  if (!(await canManageAssignment(payload, user, eventID))) {
+    throw new Error('You do not have permission to manage assignments for this event.')
+  }
+
   const targetUser = await payload.findByID({
     id: targetUserID,
     collection: 'users',
@@ -171,6 +175,7 @@ export async function upsertEventAssignmentAction(formData: FormData) {
   }
 
   revalidatePath(`/events/${eventSlug}`)
+  revalidatePath('/users')
   redirect(`/events/${eventSlug}?settings=open`)
 }
 
@@ -204,5 +209,6 @@ export async function deleteEventAssignmentAction(formData: FormData) {
   })
 
   revalidatePath(`/events/${eventSlug}`)
+  revalidatePath('/users')
   redirect(`/events/${eventSlug}?settings=open`)
 }
