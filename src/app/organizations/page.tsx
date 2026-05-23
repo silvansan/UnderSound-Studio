@@ -29,7 +29,7 @@ export default async function OrganizationsPage() {
   const isSuperAdmin = isSuperAdminUser(currentUser)
 
   return (
-    <Layout hideFooter hideHeader title="Organizations">
+    <Layout hideHeader title="Organizations">
       <section className="space-y-4">
         <div className="us-panel flex flex-wrap items-center gap-2 px-6 py-5">
           <p className="text-sm" style={{ color: 'var(--us-muted)' }}>

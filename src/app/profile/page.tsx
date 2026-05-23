@@ -13,7 +13,7 @@ export default async function ProfilePage() {
   const user = await requireAppUser()
 
   return (
-    <Layout hideFooter hideHeader title="My profile">
+    <Layout hideHeader title="My profile">
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <article className="us-panel px-6 py-6">
           <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>

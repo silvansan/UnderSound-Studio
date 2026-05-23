@@ -71,8 +71,11 @@ Response:
     "listenerTokenMode": "public",
     "speakerPasswordEnabled": false,
     "webrtcEnabled": true,
-    "hlsEnabled": false,
-    "icecastFallbackUrl": null
+    "hlsEnabled": true,
+    "hlsUrl": "https://app.example.com/hls/event-slug/en/live.m3u8",
+    "icecastFallbackUrl": null,
+    "recommendedTransport": "webrtc",
+    "transportStatus": "live"
   },
   "livekit": {
     "roomName": "ablaut_event-slug_en",
@@ -95,6 +98,45 @@ Response shape is the same as listener metadata, with:
   "livekit": {
     "tokenEndpoint": "/api/livekit/speaker-token"
   }
+}
+```
+
+### Public event listener directory
+
+`GET /api/public/listen/:eventSlug`
+
+Used by the mobile app for unified event QR codes. Returns `404` unless the event listener directory is publicly available.
+
+Response:
+
+```json
+{
+  "access": {
+    "listenerPasswordConfigured": true,
+    "listenerPasswordMissing": false,
+    "listenerPasswordRequired": false,
+    "verifyPasswordEndpoint": "/api/listener/verify-password"
+  },
+  "event": {
+    "title": "Event title",
+    "slug": "event-slug",
+    "status": "active",
+    "defaultLanguage": "en",
+    "publicListenerEnabled": true,
+    "listenerPasswordEnabled": false,
+    "unifiedListenerQrEnabled": true
+  },
+  "channels": [
+    {
+      "name": "English",
+      "slug": "en",
+      "languageCode": "en",
+      "languageLabel": "English",
+      "listenerTokenMode": "public",
+      "listenerUrl": "https://app.example.com/listen/event-slug/en",
+      "webrtcEnabled": true
+    }
+  ]
 }
 ```
 

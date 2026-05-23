@@ -37,7 +37,7 @@ export default async function UsersPage({ searchParams }: PageProps) {
   const gridClass = showOrganizationColumn ? 'us-data-row--cols-4' : 'us-data-row--cols-3'
 
   return (
-    <Layout hideFooter hideHeader title="Users">
+    <Layout hideHeader title="Users">
       <section className="space-y-4">
         <div className="us-panel flex flex-wrap items-center justify-between gap-3 px-6 py-5">
           <p className="text-sm leading-7" style={{ color: 'var(--us-muted)' }}>

@@ -3,18 +3,20 @@ import configPromise from '@payload-config'
 import Link from 'next/link'
 import { getPayload } from 'payload'
 
-import { AndroidIcon, GitHubIcon, LicenseIcon, UserCircleIcon } from './ActionIcons'
+import { GitHubIcon, LicenseIcon, UserCircleIcon } from './ActionIcons'
+import { AppDownloadFooterLink } from './AppDownloadFooterLink'
 import { AppNav } from './AppNav'
 import { Logo } from './Logo'
 import { getCurrentAppUser, requireAppUser } from '@/lib/app-auth'
 import { APP_PRONUNCIATION, APP_PRODUCT_NAME, APP_STUDIO_NAME } from '@/lib/branding'
 import { getFeatureNavItems } from '@/features/registry'
+import { loadPublicMobileAppRelease } from '@/lib/mobile-app-release'
 import { countActiveOrganizationsForUser, shouldShowMultiOrganizationNav } from '@/lib/organizations'
+import { generateQrDataUrl } from '@/lib/qrcode'
 import { isAdminUser, isSuperAdminUser } from '@/lib/permissions'
 
 type LayoutProps = {
   children: ReactNode
-  hideFooter?: boolean
   hideHeader?: boolean
   requireAuth?: boolean
   title?: string
@@ -29,17 +31,22 @@ type NavItem = {
 
 export async function Layout({
   children,
-  hideFooter = false,
   hideHeader = false,
   requireAuth = true,
   title,
 }: LayoutProps) {
+  const payload = await getPayload({ config: configPromise })
   const user = requireAuth ? await requireAppUser() : await getCurrentAppUser()
+  const mobileRelease = await loadPublicMobileAppRelease(payload)
+  const mobileAppQrDataUrl =
+    mobileRelease?.latestVersion && mobileRelease.downloadPageUrl
+      ? await generateQrDataUrl(mobileRelease.downloadPageUrl)
+      : null
   const showAppMenu = Boolean(user)
   const showPayloadAdmin = user ? isSuperAdminUser(user) : false
   const activeOrganizationCount =
     user && showAppMenu
-      ? await countActiveOrganizationsForUser(await getPayload({ config: configPromise }), user.id)
+      ? await countActiveOrganizationsForUser(payload, user.id)
       : 0
   const showMultiOrganizationNav = shouldShowMultiOrganizationNav(user, activeOrganizationCount)
   const currentYear = new Date().getFullYear()
@@ -119,51 +126,42 @@ export async function Layout({
 
           <main className="min-w-0 flex-1">{children}</main>
 
-          {hideFooter ? (
-            <footer className="px-1 py-2 text-center text-xs" style={{ color: 'var(--us-muted)' }}>
-              © {currentYear} {APP_STUDIO_NAME}
-            </footer>
-          ) : (
-            <footer className="us-panel px-5 py-4 text-xs md:px-6" style={{ color: 'var(--us-muted)' }}>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p>
-                  Copyright © {currentYear} {APP_STUDIO_NAME} · {APP_PRODUCT_NAME} {APP_PRONUNCIATION}
-                </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                  <a
-                    className="inline-flex items-center gap-1.5 font-medium"
-                    href="https://github.com/silvansan/ablaut-Studio"
-                    rel="noreferrer"
-                    style={{ color: 'var(--us-blue-dark)' }}
-                    target="_blank"
-                  >
-                    <GitHubIcon />
-                    Source code
-                  </a>
-                  <a
-                    className="inline-flex items-center gap-1.5 font-medium"
-                    href="https://github.com/silvansan/ablaut-Studio/blob/main/LICENSE"
-                    rel="noreferrer"
-                    style={{ color: 'var(--us-blue-dark)' }}
-                    target="_blank"
-                  >
-                    <LicenseIcon />
-                    License: AGPLv3
-                  </a>
-                  <a
-                    className="inline-flex items-center gap-1.5 font-medium"
-                    href="https://github.com/silvansan/ablaut-Studio-App/releases"
-                    rel="noreferrer"
-                    style={{ color: 'var(--us-blue-dark)' }}
-                    target="_blank"
-                  >
-                    <AndroidIcon />
-                    Download Android app
-                  </a>
-                </div>
+          <footer className="us-panel px-5 py-4 text-xs md:px-6" style={{ color: 'var(--us-muted)' }}>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p>
+                Copyright © {currentYear} {APP_STUDIO_NAME} · {APP_PRODUCT_NAME} {APP_PRONUNCIATION}
+              </p>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                <a
+                  className="inline-flex items-center gap-1.5 font-medium"
+                  href="https://github.com/silvansan/ablaut-Studio"
+                  rel="noreferrer"
+                  style={{ color: 'var(--us-blue-dark)' }}
+                  target="_blank"
+                >
+                  <GitHubIcon />
+                  Source code
+                </a>
+                <a
+                  className="inline-flex items-center gap-1.5 font-medium"
+                  href="https://github.com/silvansan/ablaut-Studio/blob/main/LICENSE"
+                  rel="noreferrer"
+                  style={{ color: 'var(--us-blue-dark)' }}
+                  target="_blank"
+                >
+                  <LicenseIcon />
+                  License: AGPLv3
+                </a>
+                {mobileRelease?.latestVersion && mobileAppQrDataUrl ? (
+                  <AppDownloadFooterLink
+                    downloadPageUrl={mobileRelease.downloadPageUrl}
+                    latestVersion={mobileRelease.latestVersion}
+                    qrDataUrl={mobileAppQrDataUrl}
+                  />
+                ) : null}
               </div>
-            </footer>
-          )}
+            </div>
+          </footer>
         </div>
       </div>
     </div>

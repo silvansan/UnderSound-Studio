@@ -36,8 +36,49 @@ These named volumes must not be deleted during updates:
 
 - `ablaut_db`: PostgreSQL data
 - `ablaut_uploads`: Payload media uploads
+- `ablaut_hls_segments`: LL-HLS segment files written by LiveKit egress and served by the app
 
 Redeploying the stack should not reset users, passwords, events, channels, assignments, uploaded logos, or settings.
+
+## LL-HLS Egress Container
+
+When `FEATURE_HLS_EGRESS=true`, the stack includes `livekit-egress` plus Redis. The egress service:
+
+- Writes HLS segments into the shared `ablaut_hls_segments` volume.
+- Requires elevated Linux capabilities (`SYS_ADMIN`) for the upstream LiveKit egress image when using local file output.
+- Uses `insecure: true` for the internal Docker WebSocket connection to LiveKit (`ws://livekit:7880`). This is acceptable inside the Compose network; browsers and mobile clients still reach HLS over your public app URL.
+
+Do not expose the egress container directly to the public internet. Proxy HLS through the app (`HLS_PUBLIC_BASE_URL` / `/hls/...`) instead.
+
+If you disable egress (`FEATURE_HLS_EGRESS=false`), mobile and browser clients fall back to WebRTC and any configured Icecast URL.
+
+## Mobile Android app footer
+
+The site footer can show the latest **ablaut-App** Android release with a QR code. Release metadata is stored in `site_settings` and synced from GitHub Releases.
+
+On each startup (default), the app fetches the latest release when metadata is missing or older than `MOBILE_APP_SYNC_MAX_AGE_MS` (default 6 hours):
+
+```env
+MOBILE_APP_SYNC_ON_STARTUP=true
+MOBILE_APP_GITHUB_REPO=silvansan/ablaut-App
+```
+
+Manual refresh:
+
+```bash
+npm run sync:mobile-app
+```
+
+Public endpoints used by the footer QR code:
+
+- `GET /api/public/mobile-app` — release metadata JSON
+- `GET /api/public/mobile-app/download` — redirects to the latest APK asset
+
+Optional cross-repo hook after an Android release:
+
+1. Set `MOBILE_APP_SYNC_TOKEN` on the studio server.
+2. Configure `STUDIO_MOBILE_APP_SYNC_URL=https://your-studio.example.com/api/internal/sync-mobile-app` and the same token in the ablaut-App release workflow secrets.
+3. Each new app release triggers an immediate studio metadata refresh.
 
 ## Database Schema
 

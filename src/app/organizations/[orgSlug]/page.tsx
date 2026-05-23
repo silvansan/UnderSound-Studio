@@ -52,7 +52,7 @@ export default async function OrganizationDetailPage({ params, searchParams }: P
   const tabBase = `/organizations/${organization.slug}`
 
   return (
-    <Layout hideFooter hideHeader title={organization.name}>
+    <Layout hideHeader title={organization.name}>
       <section className="space-y-4">
         <div className="us-panel px-6 py-5">
           <div className="flex flex-wrap gap-2">

@@ -108,6 +108,72 @@ export const SiteSettings: GlobalConfig = {
           ],
         },
         {
+          label: 'Mobile app',
+          fields: [
+            {
+              name: 'mobileAppEnabled',
+              type: 'checkbox',
+              defaultValue: true,
+              admin: {
+                description: 'Show the Android listener app download in the site footer with QR code.',
+              },
+            },
+            {
+              name: 'mobileAppGithubRepo',
+              type: 'text',
+              defaultValue: 'silvansan/ablaut-App',
+              admin: {
+                description: 'GitHub owner/repo used when syncing the latest release.',
+              },
+            },
+            {
+              name: 'mobileAppLatestVersion',
+              type: 'text',
+              admin: {
+                readOnly: true,
+                description: 'Synced semver version, e.g. 0.3.1',
+              },
+            },
+            {
+              name: 'mobileAppLatestTag',
+              type: 'text',
+              admin: {
+                readOnly: true,
+                description: 'Synced Git tag, e.g. v0.3.1',
+              },
+            },
+            {
+              name: 'mobileAppDownloadUrl',
+              type: 'text',
+              admin: {
+                readOnly: true,
+                description: 'Direct APK asset URL from GitHub Releases.',
+              },
+            },
+            {
+              name: 'mobileAppReleaseNotes',
+              type: 'textarea',
+              admin: {
+                readOnly: true,
+              },
+            },
+            {
+              name: 'mobileAppPublishedAt',
+              type: 'date',
+              admin: {
+                readOnly: true,
+              },
+            },
+            {
+              name: 'mobileAppLastSyncedAt',
+              type: 'date',
+              admin: {
+                readOnly: true,
+              },
+            },
+          ],
+        },
+        {
           label: 'Theme',
           fields: [
             {

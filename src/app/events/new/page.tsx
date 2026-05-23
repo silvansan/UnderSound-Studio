@@ -18,7 +18,7 @@ export default async function NewEventPage() {
   const organizations = await getManageableOrganizations()
 
   return (
-    <Layout hideFooter hideHeader title="Create event">
+    <Layout hideHeader title="Create event">
       <EventForm
         action={createEventAction}
         organizations={organizations}

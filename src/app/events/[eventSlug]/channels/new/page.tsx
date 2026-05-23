@@ -42,7 +42,7 @@ export default async function NewChannelPage({ params }: PageProps) {
   ).docs[0]
 
   return (
-    <Layout hideFooter hideHeader title={`Add channel · ${event.title}`}>
+    <Layout hideHeader title={`Add channel · ${event.title}`}>
       <ChannelForm
         action={createChannelAction}
         eventListenerPasswordConfigured={eventListenerPasswordConfigured(eventRecord)}

@@ -773,6 +773,14 @@ export interface SiteSetting {
    * Segment duration in seconds. Use 1–2 for low-latency mode.
    */
   hlsSegmentDuration?: number | null;
+  mobileAppEnabled?: boolean | null;
+  mobileAppGithubRepo?: string | null;
+  mobileAppLatestVersion?: string | null;
+  mobileAppLatestTag?: string | null;
+  mobileAppDownloadUrl?: string | null;
+  mobileAppReleaseNotes?: string | null;
+  mobileAppPublishedAt?: string | null;
+  mobileAppLastSyncedAt?: string | null;
   defaultThemeColors?: {
     greenDark?: string | null;
     green?: string | null;
@@ -803,6 +811,14 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   hlsPublicBaseUrl?: T;
   hlsMode?: T;
   hlsSegmentDuration?: T;
+  mobileAppEnabled?: T;
+  mobileAppGithubRepo?: T;
+  mobileAppLatestVersion?: T;
+  mobileAppLatestTag?: T;
+  mobileAppDownloadUrl?: T;
+  mobileAppReleaseNotes?: T;
+  mobileAppPublishedAt?: T;
+  mobileAppLastSyncedAt?: T;
   defaultThemeColors?:
     | T
     | {

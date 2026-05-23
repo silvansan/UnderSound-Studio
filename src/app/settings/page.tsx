@@ -29,7 +29,7 @@ export default async function SettingsPage() {
   const livekitPublicUrl = settings?.livekitPublicUrl || process.env.LIVEKIT_PUBLIC_URL || process.env.LIVEKIT_URL || ''
 
   return (
-    <Layout hideFooter hideHeader title="Settings">
+    <Layout hideHeader title="Settings">
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         {showPayloadAdmin && settings ? (
           <form action={updateSiteSettingsAction} className="us-panel space-y-5 px-6 py-6">
@@ -165,6 +165,56 @@ export default async function SettingsPage() {
               <li>Set browser LiveKit URL with `LIVEKIT_URL` or the LiveKit public URL field.</li>
               <li>QR codes follow the host used to open the dashboard.</li>
             </ul>
+          </article>
+        ) : null}
+
+        {showPayloadAdmin && settings ? (
+          <article className="us-panel px-6 py-6">
+            <span className="us-chip us-chip-muted">Mobile app</span>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight" style={{ color: 'var(--us-green-dark)' }}>
+              Android listener app footer
+            </h2>
+            <p className="mt-3 text-sm leading-7" style={{ color: 'var(--us-muted)' }}>
+              The site footer shows the latest Android release with a QR code that points to this server&apos;s download
+              redirect. Metadata is synced from GitHub Releases on startup and can be refreshed manually with{' '}
+              <code>npm run sync:mobile-app</code>.
+            </p>
+            <dl className="mt-5 grid gap-3 text-sm md:grid-cols-2">
+              <div>
+                <dt style={{ color: 'var(--us-muted)' }}>Latest version</dt>
+                <dd className="font-medium" style={{ color: 'var(--us-text)' }}>
+                  {settings.mobileAppLatestVersion || 'Not synced yet'}
+                </dd>
+              </div>
+              <div>
+                <dt style={{ color: 'var(--us-muted)' }}>Git tag</dt>
+                <dd className="font-medium" style={{ color: 'var(--us-text)' }}>
+                  {settings.mobileAppLatestTag || '—'}
+                </dd>
+              </div>
+              <div>
+                <dt style={{ color: 'var(--us-muted)' }}>Last synced</dt>
+                <dd className="font-medium" style={{ color: 'var(--us-text)' }}>
+                  {settings.mobileAppLastSyncedAt
+                    ? new Date(settings.mobileAppLastSyncedAt).toLocaleString()
+                    : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt style={{ color: 'var(--us-muted)' }}>GitHub repo</dt>
+                <dd className="font-medium" style={{ color: 'var(--us-text)' }}>
+                  {settings.mobileAppGithubRepo || 'silvansan/ablaut-App'}
+                </dd>
+              </div>
+            </dl>
+            {settings.mobileAppDownloadUrl ? (
+              <p className="mt-4 text-sm" style={{ color: 'var(--us-muted)' }}>
+                Footer download URL:{' '}
+                <Link href="/api/public/mobile-app/download" style={{ color: 'var(--us-blue-dark)' }}>
+                  /api/public/mobile-app/download
+                </Link>
+              </p>
+            ) : null}
           </article>
         ) : null}
 

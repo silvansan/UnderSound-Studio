@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   const recentItems = assignGroupTints(sortedRecentItems, (item) => item.groupKey)
 
   return (
-    <Layout hideFooter hideHeader title="Dashboard">
+    <Layout hideHeader title="Dashboard">
       <section className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[

@@ -154,9 +154,6 @@ export function HlsAudioPlayer({
       await media.play()
       setStatusMessage(null)
       syncPlaybackState()
-      // #region agent log
-      fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:beginPlayback',message:'manual play succeeded',data:{readyState:media.readyState,currentTime:media.currentTime,paused:media.paused,mode:playbackModeRef.current},timestamp:Date.now(),hypothesisId:'K'})}).catch(()=>{});
-      // #endregion
       return true
     } catch {
       setStatus('ready')
@@ -243,9 +240,6 @@ export function HlsAudioPlayer({
       nativeReloads += 1
       const wasPlaying = !media.paused
 
-      // #region agent log
-      fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:reloadNativeToLive',message:'native manifest reload',data:{reason,nativeReloads,baseUrl},timestamp:Date.now(),hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
 
       media.pause()
       media.src = appendHlsCacheBuster(baseUrl, Date.now())
@@ -287,17 +281,11 @@ export function HlsAudioPlayer({
         playbackModeRef.current = null
         media.removeAttribute('src')
         media.load()
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:startNativePlayback',message:'native canplay timeout',data:{liveUrl},timestamp:Date.now(),hypothesisId:'K'})}).catch(()=>{});
-        // #endregion
         return false
       }
 
       mediaReadyRef.current = true
 
-      // #region agent log
-      fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:startNativePlayback',message:'native playback ready',data:{liveUrl,readyState:media.readyState,duration:media.duration},timestamp:Date.now(),hypothesisId:'G'})}).catch(()=>{});
-      // #endregion
 
       markReady?.()
 
@@ -331,17 +319,11 @@ export function HlsAudioPlayer({
         await media.play()
         noteProgress()
         setStatusMessage(null)
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:attemptAutoPlay',message:'autoplay succeeded',data:{readyState:media.readyState,currentTime:media.currentTime,mode:playbackModeRef.current},timestamp:Date.now(),hypothesisId:'K'})}).catch(()=>{});
-        // #endregion
       } catch {
         setStatus('ready')
         setIsBuffering(false)
         setStatusMessage('Tap play to start LL-HLS playback.')
         markReady?.()
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:attemptAutoPlay',message:'autoplay blocked',data:{readyState:media.readyState},timestamp:Date.now(),hypothesisId:'K'})}).catch(()=>{});
-        // #endregion
       }
     }
 
@@ -355,9 +337,6 @@ export function HlsAudioPlayer({
       }
 
       sourceReloads += 1
-      // #region agent log
-      fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:reloadFreshSource',message:'reloading hls source',data:{reason,sourceReloads},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       setStatus('loading')
       setIsBuffering(true)
       setStatusMessage('Re-syncing LL-HLS to live audio...')
@@ -387,9 +366,6 @@ export function HlsAudioPlayer({
           return
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:reloadFreshSource',message:'reloading with hls.js',data:{supported:Hls.isSupported(),sourceReloads},timestamp:Date.now(),hypothesisId:'M'})}).catch(()=>{});
-        // #endregion
 
         if (!Hls.isSupported() || cancelled || !media) {
           return
@@ -424,9 +400,6 @@ export function HlsAudioPlayer({
           return
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:MANIFEST_PARSED',message:'manifest parsed',data:{autoPlay,mode:playbackModeRef.current},timestamp:Date.now(),hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
       })
 
       player.on(HlsModule.Events.LEVEL_LOADED, () => {
@@ -434,9 +407,6 @@ export function HlsAudioPlayer({
           return
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:LEVEL_LOADED',message:'playlist level loaded',data:{readyState:media?.readyState},timestamp:Date.now(),hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
       })
 
       player.on(HlsModule.Events.FRAG_BUFFERED, () => {
@@ -448,9 +418,6 @@ export function HlsAudioPlayer({
         setIsBuffering(false)
         mediaReadyRef.current = true
         markReady?.()
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:FRAG_BUFFERED',message:'fragment buffered',data:{readyState:media?.readyState,currentTime:media?.currentTime},timestamp:Date.now(),hypothesisId:'K'})}).catch(()=>{});
-        // #endregion
 
         if (autoPlay && media?.paused) {
           void attemptAutoPlay()
@@ -471,9 +438,6 @@ export function HlsAudioPlayer({
         const responseCode = errorData.response?.code
         const fragUrl = (errorData as { frag?: { relurl?: string } }).frag?.relurl
 
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:ERROR',message:'hls error event',data:{details:errorData.details,fatal:errorData.fatal,responseCode,fragUrl,type:errorData.type,staleSegmentRecoveries,sourceReloads},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
 
         if (errorData.details === HlsModule.ErrorDetails.FRAG_LOAD_ERROR) {
           staleSegmentRecoveries += 1
@@ -552,9 +516,6 @@ export function HlsAudioPlayer({
       playableUrlRef.current = playableUrl
       const liveUrl = stripCacheBuster(toLiveHlsManifestUrl(playableUrl))
       liveManifestUrlRef.current = liveUrl
-      // #region agent log
-      fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:startPlayback',message:'playable manifest resolved',data:{playableUrl,sessionKey,manifestReady},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setStatus('loading')
 
       markReady = () => {
@@ -575,9 +536,6 @@ export function HlsAudioPlayer({
         setIsPlaying(true)
         setStatusMessage(null)
         noteProgress()
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:playing',message:'audio playing event',data:{readyState:media.readyState,currentTime:media.currentTime,mode:playbackModeRef.current},timestamp:Date.now(),hypothesisId:'K'})}).catch(()=>{});
-        // #endregion
         markReady?.()
       }
 
@@ -627,9 +585,6 @@ export function HlsAudioPlayer({
           return
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:startHlsJs',message:'starting hls.js playback',data:{liveUrl,supported:Hls.isSupported()},timestamp:Date.now(),hypothesisId:'M'})}).catch(()=>{});
-        // #endregion
 
         if (Hls.isSupported()) {
           const hls = new Hls(createHlsJsLiveConfig())
@@ -638,9 +593,6 @@ export function HlsAudioPlayer({
           hls.loadSource(liveUrl)
           hls.attachMedia(media)
 
-          // #region agent log
-          fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:attachMedia',message:'hls.js attached to media',data:{liveUrl,readyState:media.readyState},timestamp:Date.now(),hypothesisId:'M'})}).catch(()=>{});
-          // #endregion
 
           attachHlsHandlers(hls, Hls)
 
@@ -658,13 +610,7 @@ export function HlsAudioPlayer({
           return
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:startHlsJs',message:'hls.js not supported by browser',data:{liveUrl},timestamp:Date.now(),hypothesisId:'M'})}).catch(()=>{});
-        // #endregion
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'HlsAudioPlayer.tsx:startHlsJs',message:'hls.js startup failed',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),hypothesisId:'M'})}).catch(()=>{});
-        // #endregion
       }
 
       reportFatalError(

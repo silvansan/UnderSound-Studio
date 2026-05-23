@@ -55,6 +55,14 @@ The app has in-memory per-IP rate limiting for:
 
 For multi-instance deployments, replace or extend this with shared Redis/proxy rate limiting.
 
+Current in-process behavior:
+
+- Expired buckets are purged periodically to avoid unbounded memory growth.
+- When the bucket map exceeds 10,000 entries, the oldest buckets are evicted.
+- Limits are still per app container. Put auth and token endpoints behind reverse-proxy rate limits in production.
+
+Recommended proxy limits remain documented below for Payload-owned auth routes.
+
 ## Reverse Proxy Rate Limits
 
 Payload owns its auth routes, so production deployments should rate-limit these at the reverse proxy:

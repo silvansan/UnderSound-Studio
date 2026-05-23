@@ -190,7 +190,7 @@ export default async function EventDetailPage({ params, searchParams }: PageProp
   )
 
   return (
-    <Layout hideFooter hideHeader title={event.title}>
+    <Layout hideHeader title={event.title}>
       <section className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="us-chip us-chip-muted capitalize">{event.status ?? 'draft'}</span>

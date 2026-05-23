@@ -80,7 +80,7 @@ export default async function ChannelsPage({ searchParams }: ChannelsPageProps) 
   )
 
   return (
-    <Layout hideFooter hideHeader title="Channels">
+    <Layout hideHeader title="Channels">
       <section className="space-y-4">
         <article className="us-panel px-6 py-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--us-blue-dark)' }}>

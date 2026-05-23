@@ -128,6 +128,20 @@ Record:
 - [ ] Back up database.
 - [ ] Restore database into a test stack.
 
+## Automated Tests
+
+Run locally:
+
+```bash
+npm run lint
+npm run test:int
+npm run test:e2e
+```
+
+Contract fixtures for the mobile app live in `tests/fixtures/` and are validated by `tests/int/public-api.contract.int.spec.ts`.
+
+Database-backed Payload tests run only when `ABLAUT_RUN_DB_TESTS=true` (enabled automatically in GitHub Actions CI).
+
 ## Notes
 
 - Block release if public listener/speaker links break.

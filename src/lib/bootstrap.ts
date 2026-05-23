@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { markPayloadReady } from '@/lib/app-readiness'
 import { ensureDefaultOrganization } from '@/lib/bootstrap-organizations'
 import { getLiveKitConfigOrNull } from '@/lib/livekit'
+import { syncMobileAppReleaseIfStale } from '@/lib/mobile-app-release'
 import { migrations } from '@/migrations'
 
 export async function ensureInitialSuperAdmin(payload: Payload) {
@@ -94,5 +95,6 @@ export async function runStartupBootstrap(payload: Payload) {
 
   await ensureInitialSuperAdmin(payload)
   await ensureDefaultOrganization(payload)
+  await syncMobileAppReleaseIfStale(payload)
   markPayloadReady()
 }

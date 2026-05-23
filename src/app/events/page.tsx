@@ -56,7 +56,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
   const tintedEvents = assignGroupTints(eventsWithDelete, (event) => String(event.organizationId ?? '__none__'))
 
   return (
-    <Layout hideFooter hideHeader title="Events">
+    <Layout hideHeader title="Events">
       <section className="space-y-4">
         <div className="us-panel flex flex-wrap items-center gap-2 px-6 py-5">
           {[

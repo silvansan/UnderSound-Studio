@@ -118,7 +118,7 @@ export default async function ChannelDetailPage({ params, searchParams }: PagePr
   ])
 
   return (
-    <Layout hideFooter hideHeader title={channel.name}>
+    <Layout hideHeader title={channel.name}>
       <section className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`us-chip ${channel.enabled === false ? 'us-chip-warning' : 'us-chip-blue'}`}>

@@ -67,9 +67,6 @@ async function listedSegmentsAreAvailable(manifestUrl: string, body: string): Pr
 
 async function fetchPlayableManifest(url: string): Promise<string | null> {
   if (!url.includes(LIVE_HLS_PLAYLIST_NAME)) {
-    // #region agent log
-    fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'hls-manifest-client.ts:fetchPlayableManifest',message:'rejected non-live manifest url',data:{url},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
 
     return null
   }
@@ -90,9 +87,6 @@ async function fetchPlayableManifest(url: string): Promise<string | null> {
     const playable = (await listedSegmentsAreAvailable(url, body)) ? url : null
 
     if (playable) {
-      // #region agent log
-      fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'hls-manifest-client.ts:fetchPlayableManifest',message:'manifest playable',data:{url,segments:parseSegmentUrisFromManifest(body)},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
     }
 
     return playable

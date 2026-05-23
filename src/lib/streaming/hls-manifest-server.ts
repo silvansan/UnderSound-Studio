@@ -132,9 +132,6 @@ export async function filterManifestToExistingSegments(
       return manifest
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7579/ingest/15602ce7-4b12-43d5-85a0-becfc41a86a4',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cdae02'},body:JSON.stringify({sessionId:'cdae02',location:'hls-manifest-server.ts:filterManifest',message:'all manifest segments missing on disk',data:{segmentCount:segmentBlocks.length,firstUri:segmentUriFromBlock(segmentBlocks[0]??[])},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     const filteredTail = tail.filter((line) => line.trim().length > 0 && !line.startsWith('#EXT-X-ENDLIST'))
 
